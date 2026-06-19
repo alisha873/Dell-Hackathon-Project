@@ -1,19 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "HackFlow Organizer Portal",
+  title: "HackOS Organizer Portal",
   description: "Modern hackathon management suite",
 };
 
@@ -25,7 +14,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${playfair.variable} h-full antialiased`}
+      className="h-full antialiased"
     >
       <head>
         <link

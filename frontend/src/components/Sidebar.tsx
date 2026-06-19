@@ -25,13 +25,9 @@ export default function Sidebar() {
           <span className="material-symbols-outlined">group</span>
           <span className="font-label-md text-label-md">Participants</span>
         </Link>
-        <Link href="#" className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-200">
+        <Link href="/organizer/reviewers" className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-200">
           <span className="material-symbols-outlined">folder_open</span>
-          <span className="font-label-md text-label-md">Resources</span>
-        </Link>
-        <Link href="#" className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-200">
-          <span className="material-symbols-outlined">settings</span>
-          <span className="font-label-md text-label-md">Settings</span>
+          <span className="font-label-md text-label-md">Reviewers</span>
         </Link>
       </nav>
       <div className="mt-auto px-2 pb-4">

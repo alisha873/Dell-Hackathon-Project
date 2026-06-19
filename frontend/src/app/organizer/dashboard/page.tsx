@@ -274,7 +274,7 @@ export default function OrganizerDashboard() {
                   <p className="text-[9px] font-bold text-tertiary uppercase tracking-wider">In 2 Days</p>
                   <span className="text-[7px] px-1.5 py-[1px] bg-error text-white rounded-full uppercase font-bold">Urgent</span>
                 </div>
-                <p className="text-sm font-bold text-primary mt-0.5">HackFlow (MIT) Submissions Close</p>
+                <p className="text-sm font-bold text-primary mt-0.5">HackOS (MIT) Submissions Close</p>
                 <p className="text-[10px] text-on-surface-variant mt-0.5">Hard deadline at 11:59 PM EST.</p>
               </div>
               <div className="relative pl-5 border-l-[1.5px] border-primary/30">
@@ -299,7 +299,7 @@ export default function OrganizerDashboard() {
               <li>
                 <Link href="#" className="flex items-center gap-2 text-sm text-secondary hover:translate-x-1 transition-transform">
                   <span className="material-symbols-outlined text-[16px]">article</span>
-                  HackFlow Template 2024
+                  HackOS Template 2026
                 </Link>
               </li>
               <li>

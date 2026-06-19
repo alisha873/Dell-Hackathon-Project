@@ -53,7 +53,7 @@ export default function LandingPage() {
       {/* TopNavBar */}
       <header className="bg-surface/80 dark:bg-surface/80 backdrop-blur-md border-b border-outline-variant/30 dark:border-outline/20 docked full-width top-0 sticky z-50">
         <nav className="flex justify-between items-center px-5 md:px-margin-desktop h-20 w-full max-w-[1280px] mx-auto">
-          <div className="font-display-lg text-[32px] md:text-[48px] text-primary dark:text-primary-fixed tracking-tight">HackFlow</div>
+          <div className="font-display-lg text-[32px] md:text-[48px] text-primary dark:text-primary-fixed tracking-tight">HackOS</div>
           <div className="hidden md:flex items-center gap-12">
             <Link href="#" className="text-primary font-bold border-b-2 border-primary pb-1 text-body-md">Features</Link>
             <Link href="#" className="text-on-surface-variant hover:text-primary transition-colors text-body-md">Solutions</Link>
