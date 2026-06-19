@@ -1,0 +1,344 @@
+"use client";
+
+import { useEffect } from "react";
+
+export default function HackathonAnalytics() {
+  useEffect(() => {
+    // Micro-interactions for hovering metric cards
+    document.querySelectorAll('.bento-card').forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            (card as HTMLElement).style.transform = 'translateY(-4px) scale(1.01)';
+            (card as HTMLElement).style.boxShadow = '0 20px 40px -10px rgba(214, 203, 191, 0.5)';
+        });
+        card.addEventListener('mouseleave', () => {
+            (card as HTMLElement).style.transform = 'translateY(0) scale(1)';
+            (card as HTMLElement).style.boxShadow = '0 10px 30px -5px rgba(214, 203, 191, 0.3)';
+        });
+    });
+
+    // Simple animation for progress bars on load
+    const bars = document.querySelectorAll('.bg-primary, .bg-tertiary');
+    bars.forEach(bar => {
+        const target = bar as HTMLElement;
+        const width = target.style.width;
+        target.style.width = '0';
+        setTimeout(() => {
+            target.style.transition = 'width 1.5s cubic-bezier(0.16, 1, 0.3, 1)';
+            target.style.width = width;
+        }, 200);
+    });
+  }, []);
+
+  return (
+    <div className="p-8 min-h-screen">
+      <style jsx>{`
+        .bento-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 10px 30px -5px rgba(214, 203, 191, 0.3);
+            transition: transform 0.2s ease;
+        }
+      `}</style>
+      
+      <div className="max-w-[1280px] mx-auto space-y-12">
+        {/* Page Header */}
+        <div className="flex flex-col gap-2">
+          <h2 className="font-display-lg text-[48px] text-primary font-bold tracking-tight">Performance Analytics</h2>
+          <p className="font-body-lg text-[18px] text-on-surface-variant max-w-2xl">A curated overview of engagement, efficiency, and progress for the Winter 2024 Bloom event cycle.</p>
+        </div>
+
+        {/* Metric Cards (Top Row) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
+          <div className="bento-card flex flex-col justify-between !p-6">
+            <span className="font-label-sm text-[12px] text-on-surface-variant uppercase tracking-wider">Registration Growth</span>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="font-headline-md text-[32px] font-bold text-on-surface">+12%</span>
+              <span className="text-primary text-[12px] font-bold">MoM</span>
+            </div>
+          </div>
+          <div className="bento-card flex flex-col justify-between !p-6">
+            <span className="font-label-sm text-[12px] text-on-surface-variant uppercase tracking-wider">Team Formation</span>
+            <div className="mt-2">
+              <span className="font-headline-md text-[32px] font-bold text-on-surface">88%</span>
+            </div>
+          </div>
+          <div className="bento-card flex flex-col justify-between !p-6">
+            <span className="font-label-sm text-[12px] text-on-surface-variant uppercase tracking-wider">Submission Rate</span>
+            <div className="mt-2">
+              <span className="font-headline-md text-[32px] font-bold text-on-surface">72%</span>
+            </div>
+          </div>
+          <div className="bento-card flex flex-col justify-between !p-6">
+            <span className="font-label-sm text-[12px] text-on-surface-variant uppercase tracking-wider">Eval. Completion</span>
+            <div className="mt-2">
+              <span className="font-headline-md text-[32px] font-bold text-on-surface">84%</span>
+            </div>
+          </div>
+          <div className="bento-card flex flex-col justify-between !p-6">
+            <span className="font-label-sm text-[12px] text-on-surface-variant uppercase tracking-wider">Reviewer Efficiency</span>
+            <div className="mt-2">
+              <span className="font-headline-md text-[32px] font-bold text-on-surface">1.2d</span>
+              <span className="text-on-surface-variant text-[12px] ml-1">avg</span>
+            </div>
+          </div>
+          <div className="bento-card flex flex-col justify-between !p-6">
+            <span className="font-label-sm text-[12px] text-on-surface-variant uppercase tracking-wider">Duplicates</span>
+            <div className="mt-2">
+              <span className="font-headline-md text-[32px] font-bold text-on-surface">3.4%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-12 gap-6">
+          {/* Left: Detailed Charts */}
+          <div className="col-span-12 lg:col-span-8 space-y-6">
+            {/* Registration & Team Funnels */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bento-card relative overflow-hidden h-[400px]">
+                <h3 className="font-headline-sm text-[24px] font-bold text-primary mb-8">Registration Funnel</h3>
+                <div className="flex flex-col gap-4">
+                  <div className="w-full flex items-center">
+                    <div className="w-full bg-primary-container/10 h-10 rounded-full flex items-center px-4 justify-between border border-primary-container/20">
+                      <span className="font-label-md text-[14px] font-semibold">Registered</span>
+                      <span className="font-label-md">1,240</span>
+                    </div>
+                  </div>
+                  <div className="w-[85%] flex items-center mx-auto">
+                    <div className="w-full bg-primary-container/20 h-10 rounded-full flex items-center px-4 justify-between border border-primary-container/30">
+                      <span className="font-label-md text-[14px] font-semibold">Approved</span>
+                      <span className="font-label-md">860</span>
+                    </div>
+                  </div>
+                  <div className="w-[70%] flex items-center mx-auto">
+                    <div className="w-full bg-primary-container/40 h-10 rounded-full flex items-center px-4 justify-between border border-primary-container/50">
+                      <span className="font-label-md text-[14px] font-semibold">Teamed</span>
+                      <span className="font-label-md">720</span>
+                    </div>
+                  </div>
+                  <div className="w-[55%] flex items-center mx-auto">
+                    <div className="w-full bg-[#5B6EF5]/30 h-10 rounded-full flex items-center px-4 justify-between border border-[#5B6EF5]/40">
+                      <span className="font-label-md text-[14px] font-semibold text-tertiary">Submitted</span>
+                      <span className="font-label-md text-tertiary">580</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="absolute bottom-6 right-6 opacity-20">
+                  <span className="material-symbols-outlined text-[80px]">filter_alt</span>
+                </div>
+              </div>
+              <div className="bento-card h-[400px]">
+                <h3 className="font-headline-sm text-[24px] font-bold text-primary mb-8">Team Formation</h3>
+                <div className="flex justify-center items-center h-48 relative">
+                  {/* Donut Chart Mock */}
+                  <div className="w-40 h-40 rounded-full border-[16px] border-primary-container/20 flex items-center justify-center relative">
+                    <div className="absolute inset-0 rounded-full border-[16px] border-tertiary border-t-transparent border-l-transparent rotate-45"></div>
+                    <div className="text-center">
+                      <span className="block font-headline-md text-[32px] font-bold">720</span>
+                      <span className="block font-label-sm text-[12px] text-on-surface-variant">Active Teams</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-8 space-y-2">
+                  <div className="flex justify-between font-label-md text-[14px]">
+                    <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-tertiary"></span> Complete Teams</span>
+                    <span>542</span>
+                  </div>
+                  <div className="flex justify-between font-label-md text-[14px]">
+                    <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-primary-container"></span> Pending Members</span>
+                    <span>178</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Submission Timeline */}
+            <div className="bento-card h-[350px]">
+              <div className="flex justify-between items-center mb-8">
+                <h3 className="font-headline-sm text-[24px] font-bold text-primary">Submission Timeline</h3>
+                <div className="flex gap-2 text-[12px] font-label-sm uppercase tracking-wider text-on-surface-variant">
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary"></span> 2024</span>
+                  <span className="flex items-center gap-1 opacity-40"><span className="w-2 h-2 rounded-full bg-outline"></span> 2023</span>
+                </div>
+              </div>
+              <div className="w-full h-40 flex items-end gap-2 px-2 border-b border-outline-variant/30 relative">
+                {/* Visual placeholder for a line chart */}
+                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 160">
+                  <path d="M0,140 Q100,130 200,100 T400,110 T600,60 T800,20" fill="none" stroke="#5B6EF5" strokeWidth="3"></path>
+                  <path d="M0,150 Q100,140 200,130 T400,140 T600,100 T800,70" fill="none" stroke="#97B3AE" strokeDasharray="4" strokeWidth="2"></path>
+                </svg>
+              </div>
+              <div className="flex justify-between mt-4 text-[12px] font-label-sm text-on-surface-variant">
+                <span>Nov 01</span>
+                <span>Nov 07</span>
+                <span>Nov 14</span>
+                <span>Nov 21</span>
+                <span>Nov 28</span>
+                <span>Dec 04</span>
+              </div>
+            </div>
+
+            {/* Problem Statement & Score Dist */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bento-card">
+                <h3 className="font-headline-sm text-[24px] font-bold text-primary mb-6">Track Popularity</h3>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between mb-1 text-[14px] font-label-md">
+                      <span>Sustainability</span>
+                      <span>42%</span>
+                    </div>
+                    <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+                      <div className="bg-primary h-full w-[42%]"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-1 text-[14px] font-label-md">
+                      <span>AI Ethics</span>
+                      <span>28%</span>
+                    </div>
+                    <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+                      <div className="bg-primary h-full w-[28%]"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-1 text-[14px] font-label-md">
+                      <span>Urban Mobility</span>
+                      <span>18%</span>
+                    </div>
+                    <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+                      <div className="bg-primary h-full w-[18%]"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-1 text-[14px] font-label-md">
+                      <span>Fintech Inclusion</span>
+                      <span>12%</span>
+                    </div>
+                    <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+                      <div className="bg-primary h-full w-[12%]"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bento-card">
+                <h3 className="font-headline-sm text-[24px] font-bold text-primary mb-6">Score Frequency</h3>
+                <div className="flex items-end justify-between h-40 gap-1">
+                  <div className="bg-primary-container/20 w-full h-[10%] rounded-t-sm"></div>
+                  <div className="bg-primary-container/20 w-full h-[15%] rounded-t-sm"></div>
+                  <div className="bg-primary-container/30 w-full h-[25%] rounded-t-sm"></div>
+                  <div className="bg-primary-container/40 w-full h-[40%] rounded-t-sm"></div>
+                  <div className="bg-primary-container/60 w-full h-[70%] rounded-t-sm"></div>
+                  <div className="bg-primary w-full h-[95%] rounded-t-sm"></div>
+                  <div className="bg-primary-container/60 w-full h-[60%] rounded-t-sm"></div>
+                  <div className="bg-primary-container/40 w-full h-[30%] rounded-t-sm"></div>
+                  <div className="bg-primary-container/20 w-full h-[10%] rounded-t-sm"></div>
+                  <div className="bg-primary-container/10 w-full h-[5%] rounded-t-sm"></div>
+                </div>
+                <div className="flex justify-between mt-4 text-[12px] font-label-sm text-on-surface-variant">
+                  <span>1</span>
+                  <span>5</span>
+                  <span>10</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Insights Panel */}
+          <div className="col-span-12 lg:col-span-4 space-y-6">
+            <div className="bento-card bg-surface-container-high/50 border border-outline-variant/20">
+              <h3 className="font-headline-sm text-[24px] font-bold text-primary mb-6">Strategic Insights</h3>
+              <div className="space-y-6">
+                <div className="flex gap-4">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-primary">eco</span>
+                  </div>
+                  <div>
+                    <h4 className="text-[14px] font-label-md font-bold text-on-surface">Sustainability Surge</h4>
+                    <p className="text-[14px] text-on-surface-variant mt-1">Sustainability remains the most popular track with a 15% increase in high-quality submissions compared to 2023.</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-secondary">code</span>
+                  </div>
+                  <div>
+                    <h4 className="text-[14px] font-label-md font-bold text-on-surface">Skill Gap Identified</h4>
+                    <p className="text-[14px] text-on-surface-variant mt-1">'Frontend Dev' is the most requested skill in the 'Teaming' phase, suggesting a surplus of backend-focused participants.</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-tertiary">psychology</span>
+                  </div>
+                  <div>
+                    <h4 className="text-[14px] font-label-md font-bold text-on-surface">AI/ML Dominance</h4>
+                    <p className="text-[14px] text-on-surface-variant mt-1">The highest performing domain in early evaluations is AI/ML, with an average score of 8.4/10 across all teams.</p>
+                  </div>
+                </div>
+              </div>
+              <hr className="my-8 border-outline-variant/30"/>
+              <div className="space-y-6">
+                <div>
+                  <h4 className="text-[12px] font-label-sm uppercase tracking-widest text-on-surface-variant mb-3">Reviewer Performance</h4>
+                  <div className="p-4 bg-surface rounded-xl border border-outline-variant/20">
+                    <p className="text-[14px] text-on-surface italic">"Current distribution is balanced; however, 3 lead reviewers are at 95% capacity. Suggest shifting 15 pending evals."</p>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-[12px] font-label-sm uppercase tracking-widest text-on-surface-variant mb-3">Duplicate Detection</h4>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[14px] font-label-md">Flags Today</span>
+                    <span className="bg-error/10 text-error font-bold px-2 py-0.5 rounded text-[12px]">8 New</span>
+                  </div>
+                  <p className="text-[12px] text-on-surface-variant mt-2">Duplicate rate is holding steady at 3.4%, well within the expected 5% threshold for large-scale events.</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Workload Mini-Chart */}
+            <div className="bento-card">
+              <h3 className="font-headline-sm text-[24px] font-bold text-primary mb-4">Workload Distribution</h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-outline-variant flex-shrink-0 overflow-hidden">
+                    <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBx4fpQlV1ER8jZGnNw11CK0JN8jkH1UtVRp7VtRkwFD4N8dFj9G3j1It2ofU-6y8D2O8k_Vk6BVrP7dh7WOWhXSTlpzLqyjly_UKZrjTMP5isTZim3urNElgWru12iKefCoUhlTSust0p5r3Wn6Fe5h6lbVYnmI1wzYf-8MTnJB5FeBcTzpLIiF4a6SDVLIFleYpDna94B3QXjDd8Efu0z28ErtOvGINXa5qj1-hypWBLuI0ldrdpUUuUhoOyNzgWNkJtSZYT5fig" alt="Reviewer" />
+                  </div>
+                  <div className="flex-grow">
+                    <div className="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+                      <div className="bg-tertiary h-full" style={{ width: '85%' }}></div>
+                    </div>
+                  </div>
+                  <span className="text-[12px] font-bold w-8 text-right">85%</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-outline-variant flex-shrink-0 overflow-hidden">
+                    <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtCfEExWjaNJsRUWwtbBSCrqe5NiTN-n--mQzYoFp8_i-SzEDkXEOOPdsVJRHHy4zK2VNTUZboaXmwvdy5pJG8Zv9jPdvqBQ_rhh5qWR0BBKr0nqH3Tabdj03s06RaIt2OPXkRqxeySkw3joCJU1bOF9-xb315UHsC4bC1GFNGaEynth61E-fudHmTPKKUgUQzV8KA5K8VEaZnQwtQi0c2fr7eHgrjMkdr9hbzXmCznlqRZ6BkM13AzNWCGzBew1Ux8c3-xX10tIk" alt="Reviewer" />
+                  </div>
+                  <div className="flex-grow">
+                    <div className="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+                      <div className="bg-tertiary h-full" style={{ width: '40%' }}></div>
+                    </div>
+                  </div>
+                  <span className="text-[12px] font-bold w-8 text-right">40%</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-outline-variant flex-shrink-0 overflow-hidden">
+                    <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrt5SdDe7Y6PGqe9VueyUiOk-G996oXrcj9EIGQOJrTrrDS1wZpR3kcg5sGTBoq-fXMhgxlVBZWFcej0Ik97aukTzj07W-xAnR5owuwF7VRldbUx6CDt3p95VrLNCNIHjSNWZT-Tr8dEBKRMRscT4vtuA9EU8LlDWtI1iMeKZ_LQH_fLtipY1v6v679KbrI-uxz9plv7GaJrFhCrqsAnFauCOKT3zV_XO3GFxZqYCIzdPGZ8btgfcW8MGMj2FqSQZkaUE1_pagsc0" alt="Reviewer" />
+                  </div>
+                  <div className="flex-grow">
+                    <div className="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+                      <div className="bg-tertiary h-full" style={{ width: '65%' }}></div>
+                    </div>
+                  </div>
+                  <span className="text-[12px] font-bold w-8 text-right">65%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
