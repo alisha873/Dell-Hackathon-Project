@@ -1,0 +1,1659 @@
+# Product Requirements Document
+
+---
+
+## 1. Executive Summary
+
+### 1.1 Product Overview
+
+**Product Name:** HackOS — AI-Enabled Hackathon Management Platform  
+**Problem Statement:** Hackathon organizers waste 20–30 hours per event on fragmented coordination across 5–7 tools. Evaluation processes carry undisclosed bias, participants experience communication gaps, and manual processes collapse beyond 50 participants.
+
+**Solution:** A unified, role-based 3-day MVP that automates the highest-value hackathon workflows using measurable AI components: intelligent registration deduplication, FaceScan personhood validation, skill-vector-based team formation, expertise-matched reviewer assignment, statistically rigorous bias detection, Promotion AI, and a tamper-evident audit trail.
+
+**Core Differentiators:**
+- **Resume Auto-Fill**: Participants upload resume, Gemini auto-fills the entire registration form.
+- Multi-signal duplicate detection with explainable similarity breakdown (not just email check)
+- FaceScan true-person validation using consented liveness checks, not cross-user face matching
+- Hungarian-algorithm-optimized reviewer assignment with live cost comparison vs. naive round-robin
+- Statistical bias detection (Mann-Whitney U, z-score, inter-reviewer reliability) with confidence intervals — not threshold rules
+- SHA-256 hash chain audit log with real-time chain integrity verification
+- **Gamified Leaderboards**: Real-time evaluation countdowns and reviewer consistency ranks.
+- Skill-vector coverage optimization for team formation
+
+**Tech Stack:** React + TypeScript + Tailwind (frontend), FastAPI + Python (backend), PostgreSQL + pgvector (data), sentence-transformers + Gemini Flash (AI), MediaPipe/OpenCV for local liveness validation, Redis (caching/queuing), WebSockets (real-time).
+
+---
+
+### 1.2 Judging Alignment
+
+| Judging Criterion (PDF §8.2) | Weight | Our Strategy |
+|---|---|---|
+| Technical Evaluation | 40% | Real optimization algorithms, statistical bias detection, pgvector ANN search, hash chain |
+| Feature Coverage | 25% | Complete lifecycle coverage with mocked modules + 4 deeply implemented anchors: registration/FaceScan, reviewer optimizer, bias/audit, Promotion AI |
+| User Experience | 20% | Role-based dashboards, real-time WebSocket updates, explainability panels |
+| Presentation & Documentation | 15% | Pre-staged demo data, live accuracy metrics, architecture diagram in README |
+
+---
+
+## 2. Problem Analysis
+
+### 2.1 Root Cause Analysis of Hackathon Failures
+
+| Pain Point (PDF) | Root Cause | AI Solution Mapped |
+|---|---|---|
+| Fragmented tools (5–7) | No unified data model | Single platform with event-scoped data graph |
+| 20–30 hr organizer overhead | Manual coordination at every stage | Automated workflows with human-in-the-loop only at exception points |
+| 35% fairness concerns | Subjective reviewer selection + unchecked score variance | Multi-objective assignment + statistical bias monitoring |
+| 50% communication gaps | Batch, uncontextualized notifications | RAG chatbot + event-triggered personalized alerts |
+| Collapse beyond 50 participants | O(n²) manual matching processes | Algorithmic assignment with O(n log n) complexity |
+
+### 2.2 What the Problem Statement Actually Rewards
+
+Reading the judging criteria (§8.2) carefully reveals the scoring hierarchy:
+
+- **"AI implementation accuracy and effectiveness"** — judges will ask for numbers. Every AI component must have a measurable metric attached, demonstrated live, not claimed.
+- **"Innovation and uniqueness of AI implementations"** — the bias detection approach is the highest-differentiation component because it uses real statistics (Mann-Whitney U, confidence intervals) rather than threshold rules, which almost no competitor will implement.
+- **"Workflow coherence"** — the entire hackathon lifecycle must feel like one system, not seven disconnected features.
+- **"Comprehensive audit trails"** — explicitly listed. The hash chain must be real and verifiable on demand.
+
+---
+
+## 3. Requirement Mapping Matrix
+
+### 3.1 Complete Requirement Coverage Analysis
+
+| # | Requirement (Source) | Proposed Feature | Coverage | Gap/Risk |
+|---|---|---|---|---|
+| R01 | Process 1000+ registrations/minute (§4.1) | FastAPI async + Redis queue + sentence-transformers | Partial | 3-day MVP demonstrates queued processing and backpressure; production target needs 20+ workers and horizontal scaling |
+| R02 | 95% duplicate detection accuracy (§4.1, §6.1) | Multi-signal weighted cosine similarity | Partial | 95% is aspirational without ground truth; demo with precision/recall on mock data |
+| R03 | Skill extraction from unstructured text (§4.1) | Gemini → skill vector JSON | Fully Covered | Cache Gemini calls in Redis to avoid rate limits |
+| R04 | GDPR compliance (§4.1) | Encrypt PII, hash identifiers, audit log, separate FaceScan consent | Partial | FaceScan allowed only for personhood validation; no face matching; raw frames deleted after validation |
+| R05 | Real-time validation feedback (§4.1) | WebSocket progress events | Fully Covered | — |
+| R06 | 70%+ engagement rates (§4.2) | RAG chatbot + personalized notifications | Partial | "Engagement rate" is hard to prove in 3 days; demo chatbot response quality and reminder workflow instead |
+| R07 | Personalized communication by journey stage (§4.2) | Event-triggered notification templates | Partially Covered | Full ML personalization is a Phase 2 stretch |
+| R08 | Multilingual communication (§4.2) | Gemini auto-translates chatbot and notifications | Fully Covered | Gemini 1.5 Flash natively handles multilingual translation |
+| R09 | Real-time Q&A management (§4.2) | RAG chatbot with knowledge base | Fully Covered | — |
+| R10 | Promotional content generation (§4.3) | Gemini-powered Promotion AI | Fully Covered | Accepted: generate channel-specific email, LinkedIn, X/Twitter, WhatsApp drafts |
+| R11 | Channel optimization for promotion (§4.3) | Basic channel-specific variants | Partial | 3-day MVP generates variants for email/LinkedIn/X/WhatsApp; real optimization uses mock analytics |
+| R12 | 90%+ reviewer expertise matching (§4.4) | Embedding cosine + Hungarian algorithm | Fully Covered | Demo with side-by-side vs. random assignment |
+| R13 | Workload balance ±10% variance (§4.4) | Objective function in assignment optimizer | Fully Covered | Show workload distribution chart |
+| R14 | Conflict of interest detection (§4.4) | Institution match + declared conflicts graph | Fully Covered | — |
+| R15 | Dynamic reassignment on no-show (§4.4) | Fallback greedy assignment | Fully Covered | — |
+| R16 | Bias detection 90% accuracy (§4.5) | Mann-Whitney U + z-score + IQR | Partial | "90% accuracy" requires labeled ground truth; present statistical significance instead |
+| R17 | Transparent audit trails (§4.5) | SHA-256 hash chain log | Fully Covered | Live chain verification in demo |
+| R18 | Score normalization across reviewers (§4.5) | Z-score normalization per reviewer | Fully Covered | — |
+| R19 | Configurable evaluation criteria (§4.5) | Admin-defined rubric with weights | Fully Covered | — |
+| R20 | Results in <2 minutes (§4.6) | Async results computation | Fully Covered | — |
+| R21 | Confidence scores for rankings (§4.6) | Krippendorff's alpha / inter-rater reliability | Fully Covered | Impressive metric few teams will know |
+| R22 | Personalized feedback per participant (§4.6) | Gemini NLG from score breakdown | Fully Covered | — |
+| R23 | Real-time analytics dashboard (§4.7) | WebSocket-fed charts | Fully Covered | — |
+| R24 | Predictive outcome forecasting (§4.7) | Mock historical database seeded for forecasting | Fully Covered | Simple regression on engagement data |
+| R25 | 1000+ concurrent users (§5.1) | Redis + async FastAPI + pgvector | Partial | 3-day demo target is 100 concurrent; document production path to 1000+ concurrent |
+| R26 | AI requests <2 seconds (§5.1) | Redis cache + local sentence-transformers | Fully Covered | Cache all embedding calls by content hash |
+| R27 | Multiple user roles + permissions (§5.1) | JWT + RBAC middleware | Fully Covered | — |
+| R28 | Microservices architecture (§3.1) | Modular FastAPI routers + service layer | Partial | True microservices overkill; document as "microservices-ready monolith" |
+| R29 | Background job processing (§5.2) | Redis + async workers (Celery/arq) | Fully Covered | — |
+| R30 | Skill gap analysis for team formation (§3.2) | Coverage score per problem statement | Fully Covered | — |
+| R31 | Diversity metrics in team formation (§3.2) | Diversity score (cosine distance between member vectors) | Fully Covered | — |
+| R32 | Comprehensive bias dimensions (§6.3) | Gender, institutional, tech-stack, geographic | Fully Covered | — |
+| R33 | FaceScan / facial validation | Personhood and liveness validation only | Partial | Include in registration as consented liveness check; not used for duplicate detection or identity matching |
+| R34 | Real blockchain for audit trails | Hash-chain audit log | Fully Covered | Accepted: replace real blockchain with SHA-256 hash chain in PostgreSQL |
+
+**Summary:**
+- Fully Covered: 22/34
+- Partially Covered: 10/34
+- Missing / Roadmap: 0/34
+- Conflicting: 0/34 after revised scope decisions
+
+---
+
+## 4. User Personas
+
+### 4.1 Hackathon Organizer / Admin
+
+**Name:** Priya — VIT Technical Fest Coordinator  
+**Goals:** Run a 500-participant hackathon with 3 organizing committee members. Needs to reduce coordination overhead, ensure evaluation is defensible to participants, and produce post-event analytics for institutional reporting.  
+**Pain Points:** Currently uses Google Forms + WhatsApp groups + Excel sheets. Spent 18 hours on the last hackathon managing reviewer conflicts manually. Two teams complained about biased evaluation — couldn't prove otherwise.  
+**Success Metric:** Can configure and launch a hackathon in under 30 minutes. Can generate a bias-free evaluation report after results.  
+**Technical Comfort:** Moderate. Can understand dashboards but won't read algorithm details.
+
+### 4.2 Participant
+
+**Name:** Arjun — Third-year CSE student  
+**Goals:** Register, find teammates with complementary skills, submit project, get fair evaluation and meaningful feedback.  
+**Pain Points:** "I missed the announcement about the submission deadline because it was buried in a Discord thread."  
+**Success Metric:** Registration takes under 5 minutes. Gets notified about deadlines through the platform. Receives specific feedback on why his team didn't win.  
+**Technical Comfort:** High. Will test edge cases and try to game the system.
+
+### 4.3 Reviewer / Judge
+
+**Name:** Dr. Anita — Industry professional, AI domain expertise  
+**Goals:** Evaluate 8–12 projects in her domain fairly and efficiently. Avoid conflicts of interest without manually tracking them.  
+**Pain Points:** In past hackathons, was assigned to review a project by her own former intern without being notified of the conflict. Has no standardized rubric.  
+**Success Metric:** Receives only projects in her domain. Conflict check happens automatically. Rubric is clear and consistent.  
+**Technical Comfort:** High. Will notice if the bias detection methodology is statistically sound or fabricated.
+
+### 4.4 Mentor
+
+**Name:** Rahul — Senior SDE at a product company  
+**Goals:** Provide timely guidance to teams that match his expertise. Avoid being overwhelmed by too many requests.  
+**Pain Points:** In past hackathons, got pinged by 20+ teams even though he only knows backend systems.  
+**Success Metric:** Only matched to teams working on relevant problem statements. Can see which teams haven't had mentor contact and proactively reach out.
+
+---
+
+## 5. Functional Requirements
+
+### 5.1 Admin Module
+
+| ID | Requirement | Priority | Notes |
+|---|---|---|---|
+| FR-A01 | Admin creates hackathon with: name, theme, start/end dates, submission deadline, team size constraints | P0 | Core data model |
+| FR-A02 | Admin adds problem statements with domain tags and required skill coverage profile | P0 | Used by team formation + reviewer matching |
+| FR-A03 | Admin configures evaluation rubric: criteria names, weights, score ranges | P0 | Must sum to 100% |
+| FR-A04 | Admin invites reviewers and mentors by email with role assignment | P0 | — |
+| FR-A05 | Admin views registration queue with duplicate/fraud risk scores, FaceScan status, approves/rejects flagged registrations | P0 | Human-in-the-loop for duplicate and person-validation cases |
+| FR-A06 | Admin triggers reviewer assignment and sees cost breakdown (expertise match, workload balance, conflicts) | P0 | Core demo moment |
+| FR-A07 | Admin views live bias monitoring dashboard with statistical alerts | P0 | Core demo moment |
+| FR-A08 | Admin triggers results computation and sees confidence scores per ranking | P0 | — |
+| FR-A09 | Admin downloads/verifies audit trail chain integrity | P1 | Demo: verify chain, show tamper detection |
+| FR-A10 | Admin generates promotional content via Gemini | P1 | Addresses missing R10 |
+| FR-A11 | Admin views analytics: registrations over time, skill distribution, evaluation completion | P1 | — |
+| FR-A12 | Admin generates Hackathon Success Report / Pitch Deck via Gemini (Meta-Presentation Generator) | P1 | Covers Executive ROI reporting |
+
+### 5.2 Participant Module
+
+| ID | Requirement | Priority | Notes |
+|---|---|---|---|
+| FR-P01 | Participant registers via **Magic Resume Auto-Fill** (uploads PDF to auto-fill form) or manually: name, email, phone, college, GitHub, skills, problem statements. Optional FaceScan liveness | P0 | Magic Resume Auto-Fill reduces manual entry by 80% |
+| FR-P02 | System shows real-time registration status: processing → validated → approved/flagged | P0 | WebSocket |
+| FR-P03 | Participant views AI-suggested team recommendations based on skill vector compatibility | P0 | Core team formation demo |
+| FR-P04 | Participant creates team, joins existing team, or opts into auto-formation | P0 | — |
+| FR-P05 | Team submits project: title, description, tech stack, GitHub repo, pitch/demo URL | P0 | — |
+| FR-P06 | Participant receives personalized notifications via in-platform chatbot/alerts | P1 | Chatbot handles Q&A |
+| FR-P07 | Participant receives personalized AI-generated feedback after results | P0 | Gemini NLG |
+| FR-P08 | Participant views team's score breakdown with normalized scores | P1 | Transparency |
+| FR-P09 | Participant can delete FaceScan validation data or choose manual review fallback | P1 | Required privacy control |
+
+### 5.3 Reviewer Module
+
+| ID | Requirement | Priority | Notes |
+|---|---|---|---|
+| FR-R01 | Reviewer completes profile: expertise domains, institution, availability, conflict declarations | P0 | Feeds assignment optimizer |
+| FR-R02 | Reviewer sees assigned projects with expertise match score | P0 | — |
+| FR-R03 | Reviewer accepts/declines assignment (triggers dynamic reassignment on decline) | P0 | — |
+| FR-R04 | Reviewer submits evaluation against configurable rubric with per-criterion scores + written feedback | P0 | — |
+| FR-R05 | Reviewer sees their own reliability/consistency score over time | P1 | — |
+
+### 5.4 Chatbot / Communication Module
+
+| ID | Requirement | Priority | Notes |
+|---|---|---|---|
+| FR-C01 | RAG chatbot answers questions about hackathon rules, schedule, deadlines | P0 | Knowledge base in pgvector |
+| FR-C02 | Chatbot supports follow-up questions with conversation context | P0 | Session history maintained |
+| FR-C03 | Admin adds FAQ entries to knowledge base via dashboard | P1 | — |
+| FR-C04 | Platform sends automated deadline reminders optimized by timezone and last-active heuristic | P1 | Redis-scheduled with optimal send times |
+| FR-C05 | Promotional content generator: social post, email, announcement from hackathon data | P1 | Addresses PDF §4.3 |
+| FR-C06 | Chatbot and notifications auto-translate to user's preferred language | P1 | Gemini implicit translation layer |
+
+---
+
+## 6. Non-Functional Requirements
+
+| ID | Requirement | Target | Implementation |
+|---|---|---|---|
+| NFR-01 | Registration throughput | 50+ concurrent registrations | Async FastAPI + Redis job queue |
+| NFR-02 | AI processing latency | <2s for embedding + similarity | Local sentence-transformers + Redis cache |
+| NFR-03 | Gemini API calls | <15 RPM (free tier limit) | Redis cache keyed by content SHA-256 |
+| NFR-04 | Reviewer assignment computation | <60s for 100 projects × 20 reviewers | Vectorized scipy, precomputed embeddings |
+| NFR-05 | Results computation | <2 minutes after last evaluation | Async background task |
+| NFR-06 | Audit trail write latency | <50ms per event | Synchronous write in transaction |
+| NFR-07 | Concurrent WebSocket connections | 500+ | FastAPI WebSocket + Redis pub/sub |
+| NFR-08 | Database query p99 latency | <100ms for dashboard queries | pgvector IVFFlat index, composite indexes |
+| NFR-09 | Frontend initial load | <3s | Vite bundling, lazy-loaded routes |
+| NFR-10 | Data encryption | AES-256 for PII fields | SQLAlchemy column-level encryption |
+| NFR-11 | Session security | JWT with 1-hour expiry + refresh | FastAPI + python-jose |
+| NFR-12 | GDPR data deletion | Participant data deletable on request | Cascade delete + anonymization workflow |
+| NFR-13 | FaceScan data minimization | Raw frames retained for 0 seconds after validation | Process transiently; store only consent, status, score, deletion timestamp |
+
+---
+
+## 7. Complete User Flows
+
+### 7.1 Admin: Hackathon Launch Flow
+
+```
+Admin Dashboard → "Create Hackathon"
+  ↓
+[Step 1: Basic Info] 
+  Name, Theme, Dates, Team Size
+  → POST /api/v1/hackathons
+  
+[Step 2: Problem Statements]
+  Add statements with domain tags + required skill profile
+  → POST /api/v1/hackathons/{id}/problem-statements
+  
+[Step 3: Evaluation Rubric]  
+  Define criteria (Innovation 25%, Technical 30%, Execution 25%, Presentation 20%)
+  → PUT /api/v1/hackathons/{id}/rubric
+  
+[Step 4: Invite Team]
+  Add reviewer emails with expertise domains
+  Add mentor emails with specializations
+  → POST /api/v1/hackathons/{id}/team
+  
+[Step 5: Publish]
+  Preview registration form → Publish
+  System generates: public registration link, knowledge base seed from hackathon data
+  → PUT /api/v1/hackathons/{id}/publish
+  
+Dashboard shows: live registration counter, skill distribution chart, bias monitoring (idle)
+```
+
+### 7.2 Participant: Registration + Team Formation Flow
+
+```
+Landing Page → "Register"
+  ↓
+[Registration Form]
+  Name, Email → OTP sent → OTP verified
+  Phone → OTP sent → OTP verified  
+  College, GitHub URL, Skills (free text), Resume PDF upload
+  Problem statement preference selection
+  Optional FaceScan consent → webcam liveness challenge
+  → POST /api/v1/registrations (multipart)
+  
+[Background Processing — real-time status via WebSocket]
+  1. Email/phone uniqueness check (immediate)
+  2. GitHub profile fetch + language analysis
+  3. Gemini skill extraction → skill vector JSON
+  4. sentence-transformers unified embedding generation
+  5. RapidFuzz name/college similarity against existing profiles
+  6. Weighted cosine duplicate score computation
+  7. Device fingerprint correlation check
+  8. FaceScan personhood validation status attached if consented
+  9. Risk score generation → threshold decision
+  
+[Outcome A: Score < 0.70 → Auto-approved]
+  → WebSocket event: "Registration approved"
+  → Redirect to participant dashboard
+  
+[Outcome B: Score 0.70–0.85 → Manual review queue]
+  → WebSocket event: "Registration under review"
+  → Admin sees flagged entry with similarity breakdown explanation
+  
+[Outcome C: Score > 0.85 → Flagged as likely duplicate]
+  → WebSocket event: "Additional verification required"
+  → Admin review with full signal breakdown
+
+[Outcome D: FaceScan skipped/failed]
+  → WebSocket event: "Manual person verification required"
+  → Admin verifies manually; duplicate score remains independent
+
+[Team Formation — post-approval]
+  Participant dashboard shows:
+  - Their skill vector visualization
+  - Recommended teams (sorted by coverage score improvement)
+  - Open teams browseable by problem statement
+  - "Join Team" / "Create Team" / "I'll join auto-formation"
+  
+[3 hours before hackathon start]
+  Auto-formation triggers for unmatched participants
+  → POST /api/v1/hackathons/{id}/auto-form-teams
+  → Teams formed, participants notified via WebSocket
+```
+
+### 7.3 Admin: Reviewer Assignment Flow
+
+```
+Admin Dashboard → "Assign Reviewers" (after submission deadline)
+  ↓
+System shows:
+  - N projects awaiting assignment
+  - M reviewers available
+  - Conflict graph preview (edges = detected conflicts)
+  
+Admin clicks "Run Assignment"
+  → POST /api/v1/hackathons/{id}/assign-reviewers
+  
+[Background: Assignment Optimizer runs]
+  - Precompute pairwise expertise similarity (cosine, project embedding × reviewer embedding)
+  - Build conflict adjacency matrix (institution + declared + derived)
+  - Solve multi-objective assignment via Hungarian algorithm
+    Objective weights: expertise 40%, workload 30%, conflict 20%, diversity 10%
+  - Generate assignment with per-pair cost breakdown
+  
+Result shown:
+  - Assignment table with: reviewer → project, expertise score, conflict flag
+  - Workload distribution chart (projects per reviewer, target ±10%)
+  - Side-by-side: "AI Assignment" vs "Random Assignment" — expertise scores compared
+  - Any unresolvable conflicts flagged for manual override
+  
+Admin confirms → assignments sent to reviewers via notification
+```
+
+### 7.4 Evaluation + Bias Detection Flow
+
+```
+Reviewer Dashboard → "My Assignments"
+  ↓
+Reviewer selects project → views submission + rubric
+  
+[Evaluation Submission]
+  Scores per criterion (slider + text feedback)
+  → POST /api/v1/evaluations
+  
+[Real-time Bias Analysis — triggers on each submission]
+  Background: BiasDetectionService.analyze(hackathon_id)
+  
+  Checks:
+  1. Z-score for this reviewer vs. global mean 
+     → flag if |z| > 2.0
+  2. Score distribution by gender composition
+     → Mann-Whitney U test, p < 0.05 = alert
+  3. Score distribution by institution
+     → Same test
+  4. Score distribution by tech stack
+     → Kruskal-Wallis H test (multi-group)
+  5. Inter-reviewer agreement for shared projects
+     → Krippendorff's alpha
+  
+  If alert threshold crossed:
+    → Admin receives WebSocket bias alert with:
+       - Alert type, severity, p-value, effect size
+       - Affected reviewer or demographic group
+       - Recommended action (re-review, manual check)
+    → BiasEvent logged to audit trail
+    
+Admin Dashboard: Live bias monitoring panel
+  - Current alert count and severity distribution
+  - Outlier reviewer heatmap
+  - Score distribution by demographic breakdown
+```
+
+### 7.5 Results + Feedback Generation Flow
+
+```
+Admin → "Compute Results" (after evaluation period closes)
+  ↓
+[Results Engine — async background task]
+  
+  1. For each project:
+     a. Collect all reviewer scores
+     b. Z-score normalize each reviewer's scores relative to their own distribution
+     c. Remove outlier evaluations (|z| > 3.0 after normalization)
+     d. Compute weighted average of normalized scores per criterion
+     e. Apply evaluation rubric weights → final_score
+     f. Compute confidence score = inter-rater reliability (Krippendorff's alpha)
+     
+  2. Rank projects by final_score, break ties by:
+     a. Higher confidence score (more reviewer agreement)
+     b. Higher innovation criterion score
+     c. Alphabetical (final deterministic tiebreak)
+     
+  3. Generate personalized feedback for each team via Gemini:
+     Prompt: "Given scores [X] on criteria [Y] compared to hackathon averages [Z],
+     write specific, actionable feedback for this team."
+     
+  4. Write Results to audit trail (immutable)
+  
+Results published → participants see:
+  - Their rank with confidence interval
+  - Score breakdown per criterion vs. average
+  - AI-generated personalized feedback
+  - Option to view normalized score methodology
+```
+
+---
+
+## 8. Detailed AI System Design Overview
+
+### 8.1 AI Components Map
+
+```
+                    ┌─────────────────────────────────────────────────────┐
+                    │                  GEMINI FLASH API                   │
+                    │  (skill extraction / NLG feedback / promo content)  │
+                    └──────────────────┬──────────────────────────────────┘
+                                       │ cached by Redis (content SHA-256 key)
+                                       ▼
+┌───────────────┐    ┌─────────────────────────────────────────────────┐
+│  REGISTRATION │    │           LOCAL AI PIPELINE (no API)            │
+│  INTELLIGENCE │───▶│  sentence-transformers/all-MiniLM-L6-v2        │
+│               │    │  → unified embeddings (384-dim)                 │
+│  RapidFuzz    │    │  → stored in pgvector                           │
+│  Device FP    │    │  RapidFuzz (Jaro-Winkler) for name/college      │
+└───────────────┘    └─────────────────────────────────────────────────┘
+                                       │
+         ┌─────────────────────────────┼────────────────────────────┐
+         ▼                             ▼                            ▼
+┌─────────────────┐    ┌───────────────────────────┐    ┌──────────────────────┐
+│  TEAM FORMATION │    │  REVIEWER ASSIGNMENT       │    │  BIAS DETECTION       │
+│                 │    │                            │    │                       │
+│  Skill vectors  │    │  pgvector cosine search    │    │  scipy.stats          │
+│  + coverage     │    │  + scipy                   │    │  mannwhitneyu         │
+│  scoring        │    │  linear_sum_assignment     │    │  kruskal              │
+│  + diversity    │    │  (Hungarian algorithm)     │    │  zscore normalization │
+│  optimization   │    │                            │    │  Krippendorff alpha   │
+└─────────────────┘    └───────────────────────────┘    └──────────────────────┘
+         │                             │                            │
+         └─────────────────────────────▼────────────────────────────┘
+                                       │
+                              ┌────────────────┐
+                              │  AUDIT TRAIL   │
+                              │                │
+                              │  SHA-256       │
+                              │  Hash Chain    │
+                              │  PostgreSQL    │
+                              └────────────────┘
+```
+
+### 8.2 AI Component Selection Rationale
+
+| Component | Choice | Why | Alternative Considered |
+|---|---|---|---|
+| Text embeddings | `all-MiniLM-L6-v2` (local) | 384-dim, 80ms/call, no API cost, runs on CPU | OpenAI text-embedding-3-small: good but costs money + network latency |
+| Skill extraction | Gemini Flash | Structured JSON output, understands domain context better than classification | spaCy NER: faster but needs domain fine-tuning |
+| Assignment optimizer | scipy `linear_sum_assignment` | Hungarian algorithm, exact O(n³), handles constraint weights | Google OR-Tools: more powerful but heavier setup for a 3-day MVP |
+| Bias statistics | scipy.stats (mannwhitneyu, kruskal, zscore) | Non-parametric, correct for small samples, no normality assumption | t-test: wrong for ordinal score data |
+| NLG feedback | Gemini Flash | Contextual, personalized output from score data | Template-based: faster but less impressive in demo |
+| Chatbot retrieval | pgvector + sentence-transformers | Same model as registration, single stack | Pinecone: managed but adds external dependency |
+| Fuzzy matching | RapidFuzz (Jaro-Winkler) | Fast, handles transliterations well (e.g., Arjun vs. Arjun Kumar) | difflib: slower, less robust to transliterations |
+
+---
+
+---
+
+## 9. Registration Intelligence Architecture
+
+### 9.1 Architecture Overview
+
+The registration pipeline is a multi-stage async processor. The synchronous API handler validates input, persists the raw registration, and enqueues a Celery task. The client subscribes to a WebSocket channel keyed by job_id to receive real-time stage updates.
+
+#### 9.2 Duplicate Detection Pipeline
+
+#### Stage 1: Exact Matching (< 10ms)
+
+- Email exact match → immediate flag as duplicate; no further processing
+
+- Phone hash match → immediate flag
+
+- GitHub username exact match → high duplicate signal added
+
+#### Stage 2: Fuzzy Name + College Matching (< 50ms)
+
+```text
+name_sim = RapidFuzz.token_sort_ratio(name_a.lower(), name_b.lower()) / 100
+college_sim = RapidFuzz.token_sort_ratio(normalize_college(c_a), normalize_college(c_b)) / 100
+# College normalization: lowercase, expand abbreviations (IIT->indian institute of technology)
+```
+
+#### Stage 3: Semantic Embedding Similarity (< 2s)
+
+```text
+model = SentenceTransformer('all-MiniLM-L6-v2')  # 384-dim
+resume_emb   = model.encode(gemini_parsed_resume_text)  # Gemini extracts clean text from PDF
+skills_emb   = model.encode(participant.skills_text)
+github_emb   = model.encode(fetch_github_summary(participant.github_url))
+# github_summary: top repos, languages, pinned description — GitHub REST API
+
+resume_sim  = cosine_similarity(resume_emb_a,  resume_emb_b)
+skills_sim  = cosine_similarity(skills_emb_a,  skills_emb_b)
+github_sim  = cosine_similarity(github_emb_a,  github_emb_b)
+```
+
+#### Stage 4: FaceScan Personhood Validation (Optional, < 3s if consented)
+
+```text
+# FaceScan is NOT duplicate detection and NOT identity matching.
+# Goal: validate that the registrant appears to be a real live person.
+
+person_validation = run_liveness_check(
+  checks=['face_present', 'blink_detected', 'head_turn_detected'],
+  max_duration_seconds=8
+)
+
+if person_validation.score >= 0.75:
+    person_validation_status = 'verified'
+elif consent_declined or camera_unavailable:
+    person_validation_status = 'manual_review'
+else:
+    person_validation_status = 'review_required'
+
+# Raw frames are deleted immediately after validation.
+# Store only status, score, consent timestamp, and audit metadata.
+```
+
+#### Stage 5: Weighted Score Computation
+
+```text
+W = {'resume':0.35, 'skills':0.25, 'github':0.20, 'name':0.12, 'college':0.08}
+score = sum(W[k]*sim[k] for k in W)
+
+# Device/IP bonus signals (additive):
+if device_fingerprint matches: score += 0.15
+if ip_matches_within_24h:     score += 0.10
+score = min(score, 1.0)  # cap at 1.0
+
+# FaceScan is intentionally not included in this score.
+```
+
+#### Stage 6: Threshold + Decision
+
+|Score Range|Decision|Action|
+|---|---|---|
+|0.00 – 0.69|ACCEPT|Auto-approve; store embeddings; send confirmation|
+|0.70 – 0.84|MANUAL REVIEW|Flag with similarity explanation; admin must review within 24h|
+|0.85+|POTENTIAL DUPLICATE|Block registration; show which existing registration matched and why|
+|Any: exact email/phone match|HARD DUPLICATE|Immediate block; no further processing|
+
+#### 9.3 Similarity Explanation
+
+When a registration is flagged, the admin dashboard shows a breakdown card: similarity score per dimension (as a bar chart), matching registration profile (anonymized), device/IP signals, and a recommended action (Approve / Reject / Request Clarification from participant).
+
+#### 9.4 Privacy-Preserving AI Design
+
+- Sensitive fields (email, phone, name) stored in PostgreSQL encrypted at rest (AES-256); never sent directly to Gemini
+
+- Gemini receives: resume text content only (no PII); skills description; GitHub public data
+
+- FaceScan validation stores no cross-user embeddings. Raw frames are deleted after validation; only status, score, consent timestamp, and optional salted capture hash are retained for audit.
+
+- Audit log records every duplicate check decision with actor, timestamp, and score breakdown
+
+- GDPR right-to-erasure: endpoint deletes embeddings, FaceScan metadata, PII fields nulled, registration anonymized
+
+> CRITICAL: FaceScan requires explicit opt-in consent with clear purpose explanation at registration time. Implement a "Delete My FaceScan Data" action in participant settings. If consent is declined, use manual organizer review instead of blocking registration.
+
+## 10. Team Formation Architecture
+
+### 10.1 Skill Vector Generation
+
+Each approved participant is processed by Gemini to extract a 10-dimension normalized skill vector. This vector is used for team formation, reviewer matching, and unified embedding generation.
+
+```text
+GEMINI_PROMPT = '''
+You are a technical skills classifier. Given a participant's resume and skills description,
+output ONLY a valid JSON object with these exact keys. Values must be floats 0.0-1.0.
+Keys: backend, frontend, ai_ml, design, cloud, security, mobile, data_engineering, devops, product
+Base values on demonstrated experience, not aspirations. Cap at 0.9 unless expert-level evidence.
+Output only JSON, no markdown, no explanation.
+INPUT: {resume_text}
+SKILLS: {skills_description}
+'''
+```
+
+Post-processing: normalize so max(vector) = 1.0; clip all values to [0.0, 1.0]. Store as float[] in PostgreSQL skill_vectors table.
+
+### 10.2 Coverage Scoring Model
+
+The admin defines a required coverage specification per problem statement: the minimum skill level needed for the team to be considered well-formed.
+
+```text
+required_coverage = {
+  'ai_ml': 0.70, 'backend': 0.60, 'frontend': 0.50, 'cloud': 0.40, 'design': 0.40
+}
+
+def team_vector(members):
+    return {skill: max(m.skills[skill] for m in members) for skill in all_skills}
+
+def coverage_score(members, required):
+    tv = team_vector(members)
+    total_weight = sum(required.values())
+    score = sum(min(tv[s], req) / req * req for s, req in required.items())
+    return score / total_weight  # 0.0 to 1.0
+```
+
+### 10.3 Algorithm Selection Analysis
+
+|Algorithm|Time Complexity|Optimal?|Recommendation|
+|---|---|---|---|
+|Greedy (skill gap fill)|O(n * k * m)|No (local optima)|Good for n>500; fast; use as fallback|
+|Bipartite Matching|O(V * E)|Yes for 1-to-1|Suitable for simple skill requirements|
+|Hungarian Algorithm|O(n^3)|Yes for assignment|RECOMMENDED for n<200; scipy.optimize.linear_sum_assignment|
+|ILP / Constraint Optimization|NP-hard (practical: minutes)|Yes for complex constraints|Overkill for hackathon scale; adds dependency weight|
+
+> NOTE: Use modified greedy for initial team formation (fast, explainable). Run Hungarian algorithm optimization as a secondary pass for final team quality improvement. ILP is overengineered for this use case.
+
+### 10.4 Formation Algorithm (3-Hour Auto-Formation)
+
+1. Query all approved, teamless participants for the hackathon
+
+1. Group by preferred problem statement
+
+1. For each PS with incomplete teams: compute coverage gap = required_coverage - current_team_vector
+
+1. Score each unassigned participant by: gap_fill_score = dot(gap, participant.skill_vector) / norm(gap)
+
+1. Assign participant with highest gap_fill_score to team; recalculate coverage; repeat
+
+1. If team complete (coverage >= 0.85) or max_size reached: finalize team
+
+1. Remaining unassigned participants: form balanced teams by minimizing skill vector variance
+
+1. Generate diversity_score = entropy(skill_distribution_in_team) for each team
+
+1. Notify all participants of team assignment via WebSocket + email
+
+### 10.5 Unified Participant Embedding
+
+A single 384-dim embedding is generated per participant for reuse across team formation, duplicate detection, and reviewer matching. This avoids redundant computation.
+
+```text
+unified_emb = model.encode(
+  f'{resume_text} [SEP] {skills_text} [SEP] {github_summary} [SEP] {interests} [SEP] {preferred_ps}'
+)
+# Stored in pgvector table: participant_embeddings(user_id, hackathon_id, embedding vector(384))
+```
+
+## 11. Reviewer Intelligence Architecture
+
+### 11.1 Expertise Matching
+
+Project descriptions and reviewer expertise profiles are both embedded using the same SentenceTransformer model. Cosine similarity forms the base expertise match score.
+
+```text
+project_emb  = model.encode(f'{title} {description} {tech_stack}')
+reviewer_emb = model.encode(f'{expertise_domains} {bio} {past_work}')
+expertise_sim = cosine_similarity(project_emb, reviewer_emb)
+```
+
+### 11.2 Multi-Objective Cost Matrix
+
+```text
+cost[i][j] = 1 - match_score(reviewer_i, project_j)
+
+match_score = (
+  0.40 * expertise_sim(i, j)
++ 0.30 * (1 - workload_penalty(i))   # penalty rises as assignments increase
++ 0.20 * (1 - conflict_flag(i, j))   # 0 = conflict, 1 = no conflict
++ 0.10 * diversity_bonus(i, j)         # reward assigning diverse domain pairs
+)
+```
+
+### 11.3 Conflict Detection Logic
+
+- Same organizational affiliation (college/company): conflict_score = 1.0 — reviewer cannot review their own institution
+
+- Shared IP subnet (same /24 network): conflict_score = 0.7 — potential cohabitation
+
+- Prior mentor-mentee relationship in same hackathon: conflict_score = 0.5
+
+- GitHub collaborators (co-committed repositories): conflict_score = 0.3
+
+- If any conflict signal detected: cost[i][j] = 1.0 (effectively excluded from assignment)
+
+### 11.4 Assignment Algorithm
+
+```text
+from scipy.optimize import linear_sum_assignment
+row_ind, col_ind = linear_sum_assignment(cost_matrix)
+# O(n^3) — for n=100 projects, 20 reviewers: ~50ms
+# For n=500: ~6 seconds — run as async Celery task
+
+# Load balancing constraint:
+max_per_reviewer = ceil(len(projects) / len(reviewers)) * 1.1
+# If any reviewer exceeds limit: re-assign overflow to next-best reviewer
+```
+
+### 11.5 Dynamic Reassignment
+
+- Celery beat checks reviewer submission status every 30 minutes during evaluation window
+
+- If reviewer misses T-6h warning: admin alerted with suggested reassignment
+
+- If reviewer misses T-0 (deadline): system auto-reassigns to reviewer with lowest current load and best domain match
+
+- Reassignment triggers WebSocket notification to affected reviewer and admin
+
+### 11.6 Workload Variance Guarantee
+
+```text
+target = len(projects) / len(reviewers)
+for each reviewer r:
+    assert abs(assigned_count[r] - target) / target <= 0.10  # +/-10% variance
+# If violation detected: swap lowest-priority assignment between over/under-loaded reviewers
+```
+
+## 12. Bias Detection Architecture
+
+### 12.1 Reviewer-Level Outlier Detection
+
+Triggered on every evaluation score submission. Detects reviewers who are consistently lenient or harsh relative to the peer group.
+
+```text
+reviewer_scores = [all scores submitted by reviewer_r]
+all_reviewer_means = [mean(scores) for each reviewer]
+z_score = (mean(reviewer_scores) - mean(all_reviewer_means)) / std(all_reviewer_means)
+if abs(z_score) > 2.0:
+    create_bias_alert(type='REVIEWER_OUTLIER', severity='WARNING', reviewer=r)
+```
+
+### 12.2 Demographic Bias Tests
+
+> NOTE: Demographic bias tests require demographic data fields in registration. These fields must be strictly optional and GDPR-compliant with explicit consent. Without demographic data, the system skips these tests and logs 'insufficient demographic data'.
+
+|Bias Dimension|Statistical Test|Trigger Threshold|Alert Severity|
+|---|---|---|---|
+|Gender bias|Mann-Whitney U test|p < 0.10|WARNING; p < 0.05: ALERT|
+|Geographic bias|Kruskal-Wallis H test|p < 0.10|WARNING; p < 0.05: ALERT|
+|Institutional bias|One-way ANOVA + Tukey HSD|p < 0.10|WARNING; p < 0.05: ALERT|
+|Technology stack bias|Score comparison by primary tech tag|Effect size d > 0.3|WARNING; d > 0.5: ALERT|
+|Temporal drift|Spearman correlation: score vs eval sequence|\|rho\| > 0.4|WARNING: reviewer fatigue signal|
+|Criterion inconsistency|CV (coeff of variation) per criterion|CV > 0.5 for one reviewer|WARNING: review criteria misunderstood|
+
+### 12.3 Score Normalization Pipeline
+
+```text
+# Per-reviewer Z-score normalization
+normalized[r][p] = (raw[r][p] - mean(raw[r])) / std(raw[r])
+
+# Global rescaling (bring back to original score range)
+final_normalized[r][p] = normalized[r][p] * global_std + global_mean
+
+# Aggregate across reviewers (weighted by reliability score)
+reliability[r] = 1 / (1 + consistency_penalty[r])  # lower penalty = higher reliability
+final_score[p] = weighted_mean(final_normalized[:, p], weights=reliability)
+```
+
+### 12.4 Bias Alert Workflow
+
+1. Alert created with: reviewer_id, alert_type, severity, statistical_detail, affected_projects
+
+1. Admin sees alert in dashboard: severity badge + explanation + affected submissions highlighted
+
+1. Admin actions: Acknowledge Only / Trigger Re-normalization / Request Re-evaluation from different reviewer
+
+1. All admin actions logged in audit trail
+
+1. Fairness score = 1 - max(normalized_effect_size across all detected biases) — shown on dashboard
+
+## 13. Communication AI Architecture
+
+### 13.1 System Architecture
+
+The communication system combines a RAG-powered chatbot for synchronous Q&A, a Celery-based scheduler for proactive notifications, and a WebSocket layer for real-time delivery.
+
+#### RAG Pipeline
+
+1. Knowledge base ingestion: hackathon config + FAQ document + problem statement details are chunked (512 tokens, 50-token overlap), embedded, and stored in pgvector knowledge_base table
+
+1. User message arrives via WebSocket: embed query using same model
+
+1. pgvector cosine similarity search: retrieve top-5 most relevant chunks
+
+1. Inject user context: registration status, team membership, submission status
+
+1. Construct Gemini prompt: system_prompt + contexts + user_context + conversation_history (last 10 turns) + user_message
+
+1. Gemini streams response token-by-token → WebSocket sends chunks to client for real-time display
+
+1. Store full exchange in chat_messages table; update session context
+
+#### Proactive Notification Scheduler
+
+```text
+# Celery beat schedule (runs every 15 minutes)
+@celery.task
+def check_deadline_reminders():
+    for hackathon in active_hackathons:
+        for deadline in [submission, evaluation, team_formation]:
+            delta = deadline - now()
+            if delta in [48h, 24h, 2h]:
+                users = get_users_without_completion(hackathon, deadline.type)
+                for user in users:
+                    send_personalized_reminder(user, deadline, hackathon)
+```
+
+#### Personalization Logic
+
+- Reminder content varies by user journey stage: 'Your team hasn't submitted yet — you have 2 hours!' vs 'Great submission! Stay tuned for results.'
+
+- Tone adapted based on previous engagement: frequent chatbot users get conversational tone; others get formal email
+
+- Multilingual: Gemini translates reminder content to participant's detected preferred language (from chat history)
+
+### 13.2 Chatbot Fallback Strategy
+
+- If pgvector search returns max similarity < 0.60: mark response as low-confidence
+
+- Low-confidence responses include: 'I am not sure about this — I have flagged this question for your organizer'
+
+- Organizer receives notification with unanswered question; can respond directly and optionally add to knowledge base
+
+## 14. Results Engine Design
+
+### 14.1 Results Computation Pipeline
+
+1. Trigger: admin clicks 'Compute Results' or auto-trigger when all evaluations submitted
+
+1. Collect all evaluations for the hackathon; validate completeness
+
+1. Per-reviewer Z-score normalization (see Section 12.3)
+
+1. Weighted aggregation by criteria weights defined by admin
+
+1. Bootstrap confidence intervals (1000 resamples, 95% CI) per team
+
+1. Sort teams by final_score descending
+
+1. Apply tie-breaking cascade if scores within CI overlap
+
+1. Trigger Gemini feedback generation for all teams (async batch)
+
+1. Trigger announcement content generation
+
+1. Publish results: update hackathon status, notify all participants
+
+### 14.2 Tie-Breaking Cascade
+
+|Level|Criterion|Implementation|
+|---|---|---|
+|1|Primary evaluation criterion score|Compare raw score on highest-weight criterion|
+|2|Secondary evaluation criterion score|Compare raw score on second-highest-weight criterion|
+|3|Submission timestamp|Earlier submission wins (rewards preparedness)|
+|4|Admin manual override|Admin can set explicit rank override with logged justification|
+
+### 14.3 Personalized Feedback Generation
+
+```text
+FEEDBACK_PROMPT = '''
+You are a supportive hackathon evaluator generating feedback for a student team.
+Team: {team_name} | Problem Statement: {ps_title}
+Scores by criterion: {score_breakdown}
+Reviewer comments: {aggregated_comments}
+Generate 3-4 paragraphs of encouraging, constructive feedback.
+Paragraph 1: Overall performance summary
+Paragraph 2: Strongest aspects with specific evidence
+Paragraph 3: Areas for improvement with actionable suggestions
+Paragraph 4: Encouragement and next steps
+Tone: professional but warm. Avoid generic phrases like 'good effort'.
+'''
+```
+
+### 14.4 Confidence Scoring
+
+Teams whose bootstrap CI upper bound exceeds the next team's lower bound are considered statistically distinct in ranking. Teams within CI overlap are flagged for admin review before announcement.
+
+```text
+final_score = mean(bootstrap_samples)
+ci_lower, ci_upper = np.percentile(bootstrap_samples, [2.5, 97.5])
+confidence = (ci_upper - ci_lower) / final_score  # lower = higher confidence
+```
+
+## 15. Database Schema
+
+### 15.1 Core Tables
+
+#### users
+
+|Column|Type|Constraints|Description|
+|---|---|---|---|
+|id|UUID|PK, default gen_random_uuid()|Primary key|
+|email|VARCHAR(255)|UNIQUE, NOT NULL, AES-256 encrypted|Login identifier|
+|email_hash|CHAR(64)|UNIQUE, indexed|SHA-256 for lookups without decryption|
+|password_hash|VARCHAR(255)|NOT NULL, bcrypt rounds=12|Argon2id hash|
+|role|ENUM|NOT NULL, CHECK IN (admin,participant,reviewer,mentor)|RBAC role|
+|name_encrypted|TEXT|AES-256|Full name, encrypted|
+|phone_hash|CHAR(64)|UNIQUE, nullable|Phone SHA-256 for dedup|
+|is_active|BOOLEAN|DEFAULT true|Soft delete flag|
+|created_at|TIMESTAMPTZ|NOT NULL, DEFAULT now()|Creation timestamp|
+|updated_at|TIMESTAMPTZ|NOT NULL, DEFAULT now()|Last update|
+|gdpr_consent_at|TIMESTAMPTZ|nullable|Consent timestamp for GDPR|
+|data_deleted_at|TIMESTAMPTZ|nullable|Right-to-erasure timestamp|
+
+#### hackathons
+
+|Column|Type|Constraints|Description|
+|---|---|---|---|
+|id|UUID|PK|Primary key|
+|admin_id|UUID|FK users.id|Organizer|
+|name|VARCHAR(255)|NOT NULL|Hackathon title|
+|theme|TEXT|NOT NULL|Theme description|
+|start_date|TIMESTAMPTZ|NOT NULL|Event start|
+|end_date|TIMESTAMPTZ|NOT NULL|Event end|
+|submission_deadline|TIMESTAMPTZ|NOT NULL|Idea submission cutoff|
+|min_team_size|SMALLINT|NOT NULL, DEFAULT 1|Minimum team members|
+|max_team_size|SMALLINT|NOT NULL, DEFAULT 5|Maximum team members|
+|status|ENUM|NOT NULL, DEFAULT draft|draft/published/active/evaluation/closed|
+|created_at|TIMESTAMPTZ|NOT NULL, DEFAULT now()|Creation timestamp|
+
+#### registrations
+
+|Column|Type|Constraints|Description|
+|---|---|---|---|
+|id|UUID|PK|Primary key|
+|user_id|UUID|FK users.id|Registered user|
+|hackathon_id|UUID|FK hackathons.id|Target hackathon|
+|college|VARCHAR(255)|NOT NULL|Institution name|
+|github_url|VARCHAR(500)|nullable|GitHub profile URL|
+|skills_text|TEXT|NOT NULL|Free-text skill description|
+|resume_path|VARCHAR(500)|nullable|S3/local path (NOT sent to AI)|
+|face_scan_consent_at|TIMESTAMPTZ|nullable|Separate opt-in timestamp for FaceScan validation|
+|person_validation_status|ENUM|nullable|not_started/verified/review_required/manual_review/failed|
+|person_validation_score|FLOAT|nullable|0.0-1.0 liveness/personhood confidence|
+|face_capture_hash|CHAR(64)|nullable|Salted audit hash of transient capture event; not a reusable face embedding|
+|face_data_deleted_at|TIMESTAMPTZ|nullable|Timestamp proving raw FaceScan frames were deleted|
+|status|ENUM|NOT NULL, DEFAULT pending|pending/approved/flagged/review/rejected|
+|duplicate_risk_score|FLOAT|nullable|0.0-1.0 weighted similarity|
+|fraud_risk_score|FLOAT|nullable|0.0-1.0 fraud signal|
+|confidence_score|FLOAT|nullable|Pipeline confidence (data completeness)|
+|duplicate_match_id|UUID|nullable, FK registrations.id|Matched existing registration|
+|device_fingerprint|CHAR(64)|nullable|SHA-256 of browser fingerprint|
+|ip_address_hash|CHAR(64)|nullable|SHA-256 of IP (not stored raw)|
+|created_at|TIMESTAMPTZ|NOT NULL|Submission timestamp|
+
+#### skill_vectors
+
+|Column|Type|Constraints|Description|
+|---|---|---|---|
+|id|UUID|PK|Primary key|
+|user_id|UUID|FK users.id, UNIQUE per hackathon|Participant|
+|hackathon_id|UUID|FK hackathons.id|Context hackathon|
+|backend|FLOAT|CHECK BETWEEN 0 AND 1|Backend development score|
+|frontend|FLOAT|CHECK BETWEEN 0 AND 1|Frontend development score|
+|ai_ml|FLOAT|CHECK BETWEEN 0 AND 1|AI/ML score|
+|design|FLOAT|CHECK BETWEEN 0 AND 1|UI/UX design score|
+|cloud|FLOAT|CHECK BETWEEN 0 AND 1|Cloud/infrastructure score|
+|security|FLOAT|CHECK BETWEEN 0 AND 1|Security score|
+|mobile|FLOAT|CHECK BETWEEN 0 AND 1|Mobile development score|
+|data_engineering|FLOAT|CHECK BETWEEN 0 AND 1|Data engineering score|
+|devops|FLOAT|CHECK BETWEEN 0 AND 1|DevOps score|
+|product|FLOAT|CHECK BETWEEN 0 AND 1|Product management score|
+|generated_by|VARCHAR(50)|DEFAULT gemini-1.5-flash|Model version|
+|updated_at|TIMESTAMPTZ|NOT NULL|Last updated|
+
+#### participant_embeddings (pgvector)
+
+|Column|Type|Constraints|Description|
+|---|---|---|---|
+|id|UUID|PK|Primary key|
+|user_id|UUID|FK users.id|Participant|
+|hackathon_id|UUID|FK hackathons.id|Context|
+|embedding|vector(384)|NOT NULL, indexed (ivfflat)|Unified participant embedding|
+|embedding_source|VARCHAR(100)|NOT NULL|all-MiniLM-L6-v2 or similar|
+|created_at|TIMESTAMPTZ|NOT NULL|Generation timestamp|
+
+#### teams
+
+|Column|Type|Constraints|Description|
+|---|---|---|---|
+|id|UUID|PK|Primary key|
+|hackathon_id|UUID|FK hackathons.id|Parent hackathon|
+|problem_statement_id|UUID|FK problem_statements.id, nullable|Chosen PS|
+|name|VARCHAR(255)|NOT NULL|Team name|
+|status|ENUM|DEFAULT forming|forming/complete/submitted/evaluated|
+|coverage_score|FLOAT|nullable|0.0-1.0 skill coverage score|
+|diversity_score|FLOAT|nullable|0.0-1.0 entropy-based diversity|
+|formed_by|ENUM|DEFAULT participant|participant/auto_formation|
+|created_at|TIMESTAMPTZ|NOT NULL|Creation timestamp|
+
+#### evaluations + evaluation_scores
+
+|Column|Type|Constraints|Description|
+|---|---|---|---|
+|evaluations.id|UUID|PK|Primary key|
+|evaluations.reviewer_assignment_id|UUID|FK reviewer_assignments.id|Assignment context|
+|evaluations.submission_id|UUID|FK idea_submissions.id|Project evaluated|
+|evaluations.total_raw_score|FLOAT|nullable|Sum before normalization|
+|evaluations.normalized_score|FLOAT|nullable|Z-normalized score|
+|evaluations.reliability_weight|FLOAT|nullable|Reviewer reliability score|
+|evaluations.feedback_text|TEXT|nullable|Reviewer comments|
+|evaluations.status|ENUM|DEFAULT in_progress|in_progress/submitted|
+|evaluation_scores.criteria_id|UUID|FK evaluation_criteria.id|Which criterion|
+|evaluation_scores.raw_score|FLOAT|NOT NULL, 0-10|Raw score given|
+|evaluation_scores.normalized_score|FLOAT|nullable|Z-normalized value|
+
+#### audit_log (Insert-Only)
+
+|Column|Type|Constraints|Description|
+|---|---|---|---|
+|id|UUID|PK|Primary key|
+|sequence_num|BIGSERIAL|NOT NULL, UNIQUE, monotonic|Chain sequence position|
+|previous_hash|CHAR(64)|NOT NULL|SHA-256 of previous entry|
+|current_hash|CHAR(64)|NOT NULL, UNIQUE|SHA-256(prev_hash+payload)|
+|action|VARCHAR(100)|NOT NULL|e.g. REGISTRATION_APPROVED|
+|actor_id|UUID|NOT NULL|Who performed the action|
+|entity_type|VARCHAR(50)|NOT NULL|registration/team/review/bias_alert|
+|entity_id|UUID|NOT NULL|ID of affected record|
+|metadata|JSONB|NOT NULL|Action-specific data snapshot|
+|timestamp|TIMESTAMPTZ|NOT NULL, DEFAULT now()|Action timestamp|
+
+```text
+-- PostgreSQL trigger to prevent modification:
+CREATE RULE audit_log_no_modify AS ON UPDATE TO audit_log DO INSTEAD NOTHING;
+CREATE RULE audit_log_no_delete AS ON DELETE TO audit_log DO INSTEAD NOTHING;
+```
+
+## 16. Entity-Relationship Diagram Description
+
+The following describes the key entity relationships. Implement this in dbdiagram.io or draw.io for visualization.
+
+```text
+users (1) ────── (N) registrations
+users (1) ────── (N) team_members
+users (1) ────── (1) skill_vectors [per hackathon]
+users (1) ────── (N) participant_embeddings
+users (1) ────── (N) reviewers
+
+hackathons (1) ── (N) problem_statements
+hackathons (1) ── (N) registrations
+hackathons (1) ── (N) teams
+hackathons (1) ── (N) idea_submissions
+hackathons (1) ── (N) reviewer_assignments
+hackathons (1) ── (N) knowledge_base
+hackathons (1) ── (N) bias_alerts
+
+teams (1) ──────── (N) team_members ── (N) users
+teams (1) ──────── (0,1) idea_submissions
+
+idea_submissions (1) ── (N) reviewer_assignments
+reviewer_assignments (1) ── (0,1) evaluations
+evaluations (1) ──────── (N) evaluation_scores
+
+audit_log: standalone hash-chain, references entity_id + entity_type (logical, not FK)
+knowledge_base: hackathon_id FK + pgvector embedding column (ivfflat index)
+chat_messages: session_id FK + optional pgvector context_embedding
+```
+
+#### Key Indexing Strategy
+
+- registrations: INDEX ON (hackathon_id, status) — admin review queue
+
+- participant_embeddings: ivfflat INDEX ON embedding vector_cosine_ops — ANN search
+
+- knowledge_base: ivfflat INDEX ON embedding vector_cosine_ops — RAG retrieval
+
+- audit_log: INDEX ON (entity_type, entity_id) — per-entity history lookup
+
+- evaluations: INDEX ON (submission_id, status) — results aggregation
+
+- bias_alerts: INDEX ON (hackathon_id, is_active) — dashboard alert count
+
+## 17. API Specifications
+
+### 17.1 Authentication Endpoints
+
+|Method|Endpoint|Description|Auth|Response|
+|---|---|---|---|---|
+|POST|/api/v1/auth/register|Create account with role selection|None|201 + user_id|
+|POST|/api/v1/auth/login|Email+password login; returns JWT pair|None|200 + tokens|
+|POST|/api/v1/auth/refresh|Rotate access token|Refresh token|200 + new_access|
+|POST|/api/v1/auth/logout|Revoke refresh token|Access token|204|
+|POST|/api/v1/auth/otp/send|Send phone OTP|None|200 + job_id|
+|POST|/api/v1/auth/otp/verify|Verify OTP code|None|200 + verified|
+
+### 17.2 Hackathon Management
+
+|Method|Endpoint|Description|Auth|Response|
+|---|---|---|---|---|
+|POST|/api/v1/hackathons|Create hackathon with full config|Admin JWT|201 + hackathon|
+|GET|/api/v1/hackathons/{id}|Get hackathon details|Any JWT|200 + hackathon|
+|PATCH|/api/v1/hackathons/{id}|Update hackathon (pre-start only)|Admin JWT|200 + hackathon|
+|POST|/api/v1/hackathons/{id}/publish|Transition to Published state|Admin JWT|200|
+|GET|/api/v1/hackathons/{id}/stats|Real-time registration/team stats|Admin JWT|200 + stats|
+|POST|/api/v1/hackathons/{id}/problem-statements|Add problem statement|Admin JWT|201|
+|POST|/api/v1/hackathons/{id}/criteria|Add evaluation criterion with weight|Admin JWT|201|
+
+### 17.3 Registration
+
+|Method|Endpoint|Description|Auth|Response|
+|---|---|---|---|---|
+|POST|/api/v1/registrations|Submit registration; queues AI pipeline|Participant JWT|202 + job_id|
+|GET|/api/v1/registrations/{id}|Get registration status|Owner/Admin JWT|200 + registration|
+|GET|/api/v1/registrations?hackathon_id=&status=|List registrations with filters|Admin JWT|200 + list|
+|PATCH|/api/v1/registrations/{id}/approve|Admin approves flagged registration|Admin JWT|200|
+|PATCH|/api/v1/registrations/{id}/reject|Admin rejects registration|Admin JWT|200|
+|GET|/api/v1/registrations/{id}/duplicate-analysis|Get similarity breakdown|Admin JWT|200 + analysis|
+|POST|/api/v1/registrations/{id}/facescan/start|Create FaceScan consent + liveness challenge session|Owner JWT|200 + challenge|
+|POST|/api/v1/registrations/{id}/facescan/complete|Submit FaceScan validation result; raw frames are not persisted|Owner JWT|200 + person_validation_status|
+|DELETE|/api/v1/registrations/{id}/face-data|GDPR: delete FaceScan metadata and any temporary capture artifacts|Owner/Admin JWT|204|
+
+### 17.4 Teams
+
+|Method|Endpoint|Description|Auth|Response|
+|---|---|---|---|---|
+|POST|/api/v1/teams|Create team with problem statement|Participant JWT|201 + team|
+|GET|/api/v1/teams/{id}|Get team details + coverage score|Participant/Admin JWT|200 + team|
+|POST|/api/v1/teams/{id}/join-request|Request to join team|Participant JWT|202 + request_id|
+|PATCH|/api/v1/teams/{id}/join-request/{req_id}|Accept or reject join request|Team Leader JWT|200|
+|GET|/api/v1/teams/recommendations/{user_id}|AI-ranked team suggestions|Participant JWT|200 + teams[]|
+|POST|/api/v1/teams/auto-form/{hackathon_id}|Trigger auto-formation for unpaired users|Admin JWT|202 + job_id|
+|GET|/api/v1/teams?hackathon_id=&status=|Browse all teams|Any JWT|200 + list|
+
+### 17.5 Evaluation and Results
+
+|Method|Endpoint|Description|Auth|Response|
+|---|---|---|---|---|
+|POST|/api/v1/reviews/assign/{hackathon_id}|Trigger reviewer assignment engine|Admin JWT|202 + job_id|
+|GET|/api/v1/reviews/my-assignments|Reviewer sees their project queue|Reviewer JWT|200 + list|
+|POST|/api/v1/reviews/{assignment_id}/submit|Submit evaluation scores|Reviewer JWT|201 + evaluation|
+|GET|/api/v1/bias-analysis/{hackathon_id}|Get current bias alert summary|Admin JWT|200 + alerts|
+|POST|/api/v1/results/{hackathon_id}/compute|Trigger results computation|Admin JWT|202 + job_id|
+|GET|/api/v1/results/{hackathon_id}/rankings|Get final ranked results|Admin JWT|200 + rankings|
+|GET|/api/v1/results/{hackathon_id}/feedback/{team_id}|Get personalized feedback|Owner JWT|200 + feedback|
+|POST|/api/v1/results/{hackathon_id}/publish|Publish results to all participants|Admin JWT|200|
+|POST|/api/v1/appeals|Participant submits evaluation appeal|Participant JWT|201 + appeal|
+
+### 17.6 WebSocket Channels
+
+|WebSocket Endpoint|Publisher|Subscriber / Purpose|
+|---|---|---|
+|WS /ws/registration-job/{job_id}|Registration Celery worker|Participant: real-time pipeline stage updates|
+|WS /ws/team-updates/{hackathon_id}|Team service|Participant: join requests, auto-formation notifications|
+|WS /ws/evaluation-live/{hackathon_id}|Bias detection service|Admin: live bias alerts during evaluation window|
+|WS /ws/results/{hackathon_id}|Results engine|All: instant results notification on publish|
+|WS /ws/chat/{session_id}|Chatbot service|Participant: streaming chatbot responses|
+|WS /ws/dashboard/{hackathon_id}|Analytics service|Admin: real-time registration/submission metrics|
+
+## 18. Service Architecture
+
+### 18.1 Service Decomposition
+
+The system is designed as a modular monolith (for 3-day development feasibility) with clear service boundaries that allow extraction into true microservices for production scaling. Each module is a FastAPI router with its own business logic layer.
+
+|Service Module|Responsibilities|External Dependencies|Scaling Trigger|
+|---|---|---|---|
+|Auth Service|JWT issuance, OTP, RBAC middleware|Redis (token blacklist)|Rarely; stateless|
+|Registration Service|Form ingestion, validation, job queuing|Redis (job queue), PostgreSQL|High reg volume|
+|AI Processing Service|Celery workers: embed, dedup, skill extract|Gemini API, SentenceTransformer, pgvector|CPU/GPU bound|
+|Team Service|Team CRUD, recommendations, auto-formation|pgvector, PostgreSQL|Hackathon start|
+|Submission Service|Idea CRUD, versioning, categorization|Gemini API, PostgreSQL|Submission deadline|
+|Review Service|Assignment engine, evaluation workflow|scipy, PostgreSQL|Evaluation window|
+|Bias Service|Real-time statistical tests, alert generation|scipy.stats, PostgreSQL|Evaluation window|
+|Results Service|Score aggregation, NLG feedback, publish|Gemini API, PostgreSQL|Results trigger|
+|Communication Service|RAG chatbot, notification scheduler|pgvector, Celery, Gemini API|Event milestones|
+|Promotion Service|Content generation, A/B tracking|Gemini API, PostgreSQL|On-demand|
+|Analytics Service|Real-time metrics, predictive signals|PostgreSQL, Redis|Dashboard load|
+|Audit Service|Hash-chain log writer and verifier|PostgreSQL (insert-only)|Every state change|
+
+### 18.2 Infrastructure Stack
+
+|Layer|Technology|Configuration Notes|
+|---|---|---|
+|API Gateway|Nginx + Uvicorn|Rate limiting, SSL termination, WebSocket proxy_pass, upstream keepalive 1000|
+|Backend Framework|FastAPI (Python 3.11+)|Async handlers, asyncpg connection pool (pool_size=20), Pydantic v2 models|
+|Task Queue|Celery 5 + Redis 7|Separate queues: high-priority (registration), low-priority (analytics)|
+|Primary Database|PostgreSQL 15 + pgvector 0.5|Max connections: 200; connection pooling via PgBouncer (pool_size=50)|
+|Cache / Pub-Sub|Redis 7|Token blacklist, job results cache, WebSocket pub-sub channels|
+|Frontend|React 18 + TypeScript + Tailwind 3|Vite build, React Query for data fetching, Zustand for state management|
+|Real-time|FastAPI WebSockets + Redis pub-sub|All real-time updates flow through Redis channels; WS handlers are subscribers|
+|AI Models|SentenceTransformer (local) + Gemini API|Model loaded once per Celery worker; Gemini: exponential backoff, circuit breaker|
+|Containerization|Docker 24 + Docker Compose|Separate containers: api, celery-worker-high, celery-worker-low, celery-beat, redis, postgres, nginx|
+|Storage|Local volume (dev) / S3-compatible (prod)|Resume PDFs and pitch decks; FaceScan frames are transient and not retained|
+|Monitoring|Structlog + Prometheus metrics endpoint|Request latency, queue depth, AI pipeline stage timing, error rates|
+
+## 19. Event Flows
+
+#### 19.1 Registration Event Flow
+
+```text
+POST /api/v1/registrations
+  → Validate request (Pydantic) → Check OTP verified → Persist raw registration
+  → Enqueue job: registration_pipeline.apply_async(registration_id)
+  → Return 202 { job_id, ws_channel }
+
+[Celery Worker] registration_pipeline(registration_id):
+  STAGE 1: 'PARSING_RESUME'  → publish to WS
+    → download resume PDF → Gemini extract text → store parsed_resume
+  STAGE 2: 'GENERATING_EMBEDDINGS'  → publish to WS
+    → fetch github_summary → encode resume,skills,github → upsert participant_embeddings
+    → generate skill_vector via Gemini → upsert skill_vectors
+  STAGE 3: 'DUPLICATE_CHECK'  → publish to WS
+    → pgvector ANN search top-20 similar embeddings
+    → compute weighted similarity for each candidate
+    → apply additional signals (device, IP)
+    → store duplicate_risk_score, fraud_risk_score
+  STAGE 4: 'FINALIZING'  → publish to WS
+    → apply threshold → update registration.status
+    → create audit_log entry
+    → if approved: send confirmation notification
+    → if flagged: create admin_task
+  COMPLETE: publish final status to WS → client updates UI
+```
+
+#### 19.2 Results Event Flow
+
+```text
+POST /api/v1/results/{id}/compute  [Admin trigger]
+  → Enqueue results_pipeline.apply_async(hackathon_id)
+
+[Celery Worker] results_pipeline(hackathon_id):
+  1. Fetch all submitted evaluations
+  2. Per-reviewer Z-score normalization
+  3. Weighted aggregation by criteria weights
+  4. Bootstrap CI (1000 resamples, parallel with numpy)
+  5. Sort + tie-break cascade
+  6. Batch Gemini feedback generation (up to 10 concurrent)
+  7. Persist final_scores, rankings, feedback
+  8. Update hackathon.status = 'results_ready'
+  9. Return to API; admin reviews before publish
+ 10. POST /publish → broadcast to WS /ws/results/{id} → all participants notified
+```
+
+## 20. Sequence Diagrams
+
+#### 20.1 Registration with Duplicate Detection
+
+```text
+Participant       React Client      FastAPI         Redis Queue     Celery Worker   Gemini API    pgvector
+    |                 |                |                 |                |              |             |
+    |──upload PDF/submit form────>                |                 |                |              |             |
+    |                 |──POST /reg─────>                 |                |              |             |
+    |                 |                |──persist raw────>                |              |             |
+    |                 |                |──enqueue job────>                |              |             |
+    |                 |<──202 {job_id}──                 |                |              |             |
+    |                 |──subscribe WS──>                 |                |              |             |
+    |                 |                |                 |──pop job───────>              |             |
+    |                 |<──stage: PARSING────────────────────────────────>|              |             |
+    |                 |                |                 |                |──parse PDF──>|             |
+    |                 |                |                 |                |<──text───────|             |
+    |                 |<──stage: EMBEDDING─────────────────────────────>|              |             |
+    |                 |                |                 |                |──encode────────────────────>
+    |                 |                |                 |                |<──vectors──────────────────|
+    |                 |<──stage: DEDUP──────────────────────────────────>|              |             |
+    |                 |                |                 |                |──ANN search──────────────> |
+    |                 |                |                 |                |<──top 20 matches───────────|
+    |                 |                |                 |                |──compute weighted scores    |
+    |                 |<──stage: COMPLETE + status───────────────────────>              |             |
+```
+
+#### 20.2 Reviewer Assignment Sequence
+
+```text
+Admin      FastAPI     Celery Worker   scipy     PostgreSQL    Reviewer Email
+  |            |             |            |            |              |
+  |─POST assign>             |            |            |              |
+  |            |─enqueue─────>            |            |              |
+  |<─202 job_id─             |            |            |              |
+  |            |             |─load embs──────────────>|              |
+  |            |             |<─project+reviewer embs──|              |
+  |            |             |─cosine sim matrix        |              |
+  |            |             |─conflict detect          |              |
+  |            |             |─build cost matrix        |              |
+  |            |             |─linear_sum_assign──────> |              |
+  |            |             |<─optimal assignments──── |              |
+  |            |             |─save assignments──────────────────────> |
+  |            |             |─send notifications──────────────────────>
+  |─GET results>             |            |            |              |
+  |<─assignment plan + scores─           |            |              |
+```
+
+#### 20.3 Real-Time Bias Detection
+
+```text
+Reviewer   FastAPI   Bias Service   scipy.stats   Redis Pub/Sub   Admin WS
+   |            |         |               |               |           |
+   |─POST score─>         |               |               |           |
+   |            |─trigger─>               |               |           |
+   |            |         |─run Z-score───>               |           |
+   |            |         |─run Mann-Whitney, KW──────────>           |
+   |            |         |<──p-values, z-scores──────────|           |
+   |            |         |─if alert: publish to Redis───────────────>|
+   |            |         |─save bias_alert to DB         |           |
+   |            |         |                               |──push WS──>
+   |<──200 eval_id────────|               |               |           |
+```
+
+## 21. Security Architecture
+
+### 21.1 Authentication & Authorization
+
+- JWT RS256: private key signs tokens server-side; public key distributed for verification
+
+- Access token: 15-minute expiry; delivered in HTTP response body
+
+- Refresh token: 7-day expiry; HttpOnly Secure SameSite=Strict cookie (not accessible to JavaScript)
+
+- Token blacklist: Redis SET with TTL matching token expiry; checked on every request
+
+- RBAC middleware: FastAPI dependency injected per-route; roles: admin, participant, reviewer, mentor
+
+- Resource ownership checks: participant can only access their own registration/team/submission
+
+### 21.2 Data Encryption
+
+- PII at rest: AES-256-GCM with per-tenant key; email, name, phone stored encrypted; hash stored for lookups
+
+- Passwords: Argon2id (memory=64MB, parallelism=2, iterations=3) — not bcrypt
+
+- FaceScan: no reusable face embeddings stored. Raw frames are processed transiently, deleted after validation, and represented only by validation status, score, consent timestamp, and salted audit hash.
+
+- TLS 1.3 in transit: Nginx terminates TLS; internal services communicate over Docker network
+
+### 21.3 Input Validation & Injection Prevention
+
+- All API inputs validated via Pydantic v2 models with strict type enforcement
+
+- SQL: asyncpg parameterized queries only; no raw SQL string concatenation
+
+- File uploads: MIME type validation + magic byte check; size limit 10MB; stored outside web root
+
+- Rate limiting: SlowAPI middleware — 100 req/min on auth endpoints, 5 req/min on OTP send
+
+- Content Security Policy header: prevents XSS; no inline scripts in React build
+
+### 21.4 AI Security
+
+- Prompt injection defense: user-controlled text never interpolated directly into system prompts
+
+- Gemini outputs parsed and validated before storage; never executed as code
+
+- GitHub API calls use read-only token; no write permissions; rate limit handling
+
+- AI models loaded from local disk (SentenceTransformer); no external model calls at inference time
+
+## 22. GDPR Architecture
+
+### 22.1 Data Minimization
+
+- Only collect fields with explicit purpose documented; no demographic data unless explicitly needed for bias testing and consented
+
+- FaceScan: strictly optional; purpose statement shown before camera access; no dark patterns; used only for true-person validation and never for duplicate matching
+
+- GitHub: public data only via REST API; no OAuth required
+
+- Phone: collected for OTP verification only; stored as hash after verification
+
+### 22.2 Consent Management
+
+- Registration consent checkbox: 'I agree to [Privacy Policy link]. My data will be used for: registration validation, team matching, hackathon management.' Must be unchecked by default
+
+- Separate opt-in for: FaceScan liveness/personhood validation, with explicit statement that no cross-user face matching is performed
+
+- Separate opt-in for: optional demographic data for bias detection improvement
+
+- Consent timestamp stored in users.gdpr_consent_at; consent version stored
+
+- Consent withdrawal endpoint: POST /api/v1/gdpr/withdraw-consent — stops processing; triggers erasure
+
+### 22.3 Data Subject Rights
+
+|Right|Endpoint|Implementation|
+|---|---|---|
+|Right to Access (Art. 15)|GET /api/v1/gdpr/my-data|Returns all stored data for user as JSON export|
+|Right to Erasure (Art. 17)|DELETE /api/v1/gdpr/my-data|Nulls PII fields; deletes embeddings; anonymizes audit log actor_id|
+|Right to Rectification (Art. 16)|PATCH /api/v1/profile/pii|Update name/college with re-validation|
+|Right to Portability (Art. 20)|GET /api/v1/gdpr/export|Downloads structured JSON of all user data|
+|Right to Object (Art. 21)|POST /api/v1/gdpr/object|Stops automated profiling; flags for manual review|
+
+### 22.4 Data Retention Policy
+
+- Active hackathon data: retained for 90 days after event close
+
+- Evaluation scores (aggregated, anonymized): retained for 2 years for bias research
+
+- FaceScan raw frames: deleted immediately after validation; FaceScan metadata deleted on request or 30 days after event close
+
+- Audit logs: retained for 7 years (legal requirement for transparency claims)
+
+- Automated purge job: Celery beat task runs nightly to delete expired data
+
+## 23. Scalability Strategy
+
+### 23.1 Current Architecture (3-Day Prototype)
+
+- Single Docker Compose deployment: api + celery-worker (2 instances) + celery-beat + redis + postgres + nginx
+
+- PostgreSQL with pgvector: handles 100,000+ embeddings with ivfflat index
+
+- Redis job queue: handles 3-day demo bursts of 200 registrations/minute with backpressure; production path scales to 1000+/minute with more workers
+
+- Target: 100 concurrent users, 200 registrations/minute on a single VM
+
+### 23.2 Path to Production Scale (1000+ Concurrent Users)
+
+1. Database: Add PostgreSQL read replica (asyncpg routes reads to replica); add PgBouncer for connection pooling
+
+1. Celery workers: scale worker containers horizontally (10+ workers for AI tasks)
+
+1. pgvector: Partition participant_embeddings table by hackathon_id; add HNSW index for faster ANN search
+
+1. API: Deploy multiple FastAPI containers behind Nginx load balancer with least_conn algorithm
+
+1. Redis: Sentinel setup for high availability; separate instances for cache vs queue vs pub-sub
+
+1. CDN: Serve React static build from Cloudflare CDN; cache API responses for public hackathon data
+
+1. S3-compatible storage: Move resume and pitch files to MinIO or AWS S3; keep FaceScan frames transient
+
+### 23.3 AI Throughput Optimization
+
+- SentenceTransformer: load model once per worker; batch encode up to 32 registrations per call
+
+- Gemini API: async concurrent requests (max 10 parallel); circuit breaker with 30s timeout; fallback to smaller model
+
+- pgvector ANN search: ivfflat with lists=100 for 100K embeddings; HNSW for production (no re-indexing needed)
+
+- Embedding cache: Redis TTL-based cache for GitHub embeddings (GitHub data changes infrequently)
+
+### 23.4 Queue Architecture
+
+```text
+Redis Lists (Celery Queues):
+  registration_high:  priority queue for registration pipeline jobs (SLA: 30s)
+  ai_low:             batch jobs — team formation, reviewer assignment (SLA: 5min)
+  notifications:      email/WS push notifications (SLA: 60s)
+  analytics:          metrics aggregation (SLA: 5min, can drop on overload)
+
+Worker pools:
+  celery-worker-high:  4 workers, consumes registration_high + ai_low
+  celery-worker-notif: 2 workers, consumes notifications
+```
+
+## 24. Analytics Dashboard Design
+
+> NOTE: This section addresses a GAP in the proposed solution. The PDF (Section 4.7) requires a real-time analytics dashboard. It is not in the proposed solution and must be built.
+
+### 24.1 Dashboard Sections
+
+#### Live Overview (Top Cards)
+
+- Total Registrations | Approved | Pending Review | Flagged — with real-time WebSocket updates
+
+- Teams Formed | Complete Teams | Incomplete Teams — progress ring chart
+
+- Submissions Received | Evaluations Submitted | Pending — linear progress bar
+
+- Active Bias Alerts — red badge with click-to-drill-down
+
+#### Registration Analytics
+
+- Registration rate over time: line chart (registrations per hour)
+
+- Skill distribution heatmap: 10-skill radar chart for all participants aggregated
+
+- College distribution: horizontal bar chart — top 20 colleges
+
+- Duplicate risk distribution: histogram of duplicate_risk_score values
+
+#### Team Formation Analytics
+
+- Coverage score distribution: all teams — histogram
+
+- Uncovered skills radar: which skills are most scarce across all teams
+
+- Team size distribution: bar chart
+
+- Auto-formed vs self-formed ratio: donut chart
+
+#### Evaluation Analytics
+
+- Reviewer completion rate: table per reviewer with % complete + time remaining
+
+- Score distribution per criterion: box plot per reviewer — visual outlier detection
+
+- Bias alert timeline: horizontal scroll list of alerts with severity and resolution status
+
+- Fairness score gauge: 0-100 composite score updated in real-time
+
+#### Predictive Insights Panel
+
+- Teams at risk of not submitting: based on engagement score (logins, chat activity, submission drafts)
+
+- Estimated final participation rate: simple logistic regression on historical patterns
+
+- Reviewer load forecast: predicted time to completion per reviewer based on current rate
+
+### 24.2 Implementation
+
+- React frontend: Recharts for charts; react-query polling every 30s; WebSocket for live metrics
+
+- Backend: GET /api/v1/analytics/{hackathon_id}/overview returns pre-aggregated metrics
+
+- Metrics aggregated by Celery beat task every 5 minutes; stored in analytics_snapshots table
+
+- Real-time deltas pushed via WebSocket /ws/dashboard/{hackathon_id} channel
+
+- PDF export: backend generates executive summary PDF via pdfkit; POST /api/v1/analytics/{id}/export
+
+## 25. Success Metrics
+
+|Category|Metric|Target|Measurement Method|
+|---|---|---|---|
+|Efficiency|Registration processing time|< 30 seconds (p95)|Celery task duration logging|
+|Efficiency|Reviewer assignment time|< 60 seconds for 100 projects|Celery task timing|
+|Efficiency|Organizer effort reduction|> 40% vs manual process|Admin time-on-task survey|
+|Efficiency|System availability during event|> 95%|Uptime monitoring endpoint|
+|Quality|Duplicate detection accuracy|> 95%|Manual validation on test dataset of 200 registrations|
+|Quality|Skill extraction accuracy|> 85%|Human review of 50 skill vectors|
+|Quality|Reviewer expertise match accuracy|> 90%|Reviewer post-event satisfaction survey|
+|Quality|Bias detection sensitivity|> 80%|Injected bias test cases in mock data|
+|Experience|Participant satisfaction|> 4.0 / 5.0|Post-event survey NPS|
+|Experience|Reviewer satisfaction|> 3.5 / 5.0|Post-event reviewer survey|
+|Communication|Chatbot helpful response rate|> 75%|Thumbs up/down feedback in chat UI|
+|Communication|Notification engagement rate|> 60%|WS delivery confirmation + read receipt|
+|Innovation|AI feature effectiveness|> 70%|Feature-level accuracy metrics above|
+|Innovation|Automation coverage|> 60% of lifecycle steps automated|Feature audit against lifecycle checklist|
+|Demo|Metrics demonstrable in presentation|> 60% of KPIs|Live demo test run on mock data|
+
+## 26. 3-Day Implementation Roadmap
+
+Adjusted for a 3-day development window — prioritize working demos over perfect polish. Build the P0 path end-to-end first: registration + FaceScan validation, duplicate analysis, team/reviewer assignment, bias detection, hash-chain audit, results, and Promotion AI. Analytics, chatbot, appeals, and forecasting are demo-depth unless time remains.
+
+### Day 1: Foundation + Registration AI (Hours 1-15)
+
+#### Hours 1-4: Project Setup
+
+- Initialize: FastAPI app, PostgreSQL + pgvector, Redis, Docker Compose, React + Vite
+
+- Database: apply all migrations (schema from Section 15); seed mock data script
+
+- Auth: JWT RS256 login, registration, RBAC middleware; 4 user roles working
+
+- Admin: create hackathon form with full config (name, theme, PS, criteria, dates, team sizes)
+
+#### Hours 5-10: Registration Intelligence
+
+- Registration form: all fields + resume PDF upload; phone OTP (mock SMS service); optional FaceScan consent and webcam challenge
+
+- Celery pipeline: Stage 1 (Gemini resume parse) + Stage 2 (SentenceTransformer embeddings) + Stage 3 (pgvector ANN dedup)
+
+- FaceScan validation: client-assisted liveness/personhood check using face-present + blink/head-turn challenge; store only status and score
+
+- WebSocket progress events: client shows live pipeline stages with spinner
+
+- Admin review queue: flagged registrations with similarity breakdown explanation and separate FaceScan status
+
+#### Hours 11-15: Skill Vectors + Basic Team Formation
+
+- Gemini skill vector generation on registration approval
+
+- Team browse page: create/join teams; show coverage score + skill radar chart per team
+
+- Team recommendations: ranked by gap-fill score using participant embedding vs team coverage gap
+
+### Day 2: AI Modules (Hours 16-30)
+
+#### Hours 16-20: Auto Team Formation + Submission
+
+- Auto-formation Celery task: greedy coverage optimizer + diversity scoring
+
+- Admin trigger: 'Form Teams Now' button + scheduled 3h before hackathon start
+
+- Idea submission form: title, description, tech stack, pitch PDF upload
+
+- Gemini idea categorization + duplicate idea detection
+
+#### Hours 21-26: Reviewer Intelligence + Evaluation
+
+- Reviewer assignment engine: embedding similarity + multi-objective cost matrix + scipy Hungarian solver
+
+- Conflict detection: org affiliation + IP subnet check
+
+- Evaluation UI: reviewer sees assigned projects, scores criteria via sliders, adds comments
+
+- Real-time bias detection: Z-score outlier check on every score submission; admin WebSocket alert
+
+#### Hours 27-30: Results Engine + Audit Trail
+
+- Results computation: Z-normalization + weighted aggregation + bootstrap CI + tie-breaking
+
+- Gemini personalized feedback generation: batch of all teams
+
+- Hash-chain audit log: implement insert-only trigger + hash computation on every state change
+
+- Results publication: WebSocket broadcast to all participants
+
+### Day 3: Communication + Analytics + Polish (Hours 31-45)
+
+#### Hours 31-35: Communication AI + Promotion AI
+
+- RAG chatbot: knowledge base ingestion from hackathon config; pgvector retrieval + Gemini generation + WS streaming
+
+- Scheduled reminders: Celery beat T-24h and T-2h deadline reminders for unsubmitted teams
+
+- Promotion AI: Gemini generates email + LinkedIn + X/Twitter + WhatsApp content from hackathon details; admin can edit, save variants, and mock-send
+
+#### Hours 36-40: Analytics Dashboard + Appeal Flow
+
+- Admin analytics dashboard: Recharts charts for registration funnel, skill heatmap, bias alerts, reviewer completion
+
+- Real-time dashboard WebSocket: live registration counter, submission count, alert badge
+
+- Appeal submission form: participant explains dispute, selects affected criteria; admin review queue
+
+#### Hours 41-45: Polish + Demo Prep
+
+- UI/UX polish: responsive design, loading states, error boundaries, empty states
+
+- Mock data generation script: 50 participants (diverse skills/colleges), 10 reviewers, 15 submissions, injected bias patterns
+
+- Docker Compose deployment on cloud VM (render.com free tier or Fly.io)
+
+- Documentation: README with setup, API docs (FastAPI auto-generated at /docs), architecture diagram
+
+- Demo script: 10-minute walkthrough covering all evaluation criteria with live AI demonstrations
+
+### 26.2 Feature Priority Matrix
+
+|Feature|Priority|Judging Impact|If Time Runs Out|
+|---|---|---|---|
+|Registration + Duplicate Detection|P0 (Must Have)|Technical 40%|Core differentiator; do not cut|
+|FaceScan Personhood Validation|P0 (Must Have)|Feature + Security + UX|If camera fails, route to manual review but keep the status flow|
+|Skill Vectors + Team Formation|P0 (Must Have)|Technical + Feature|Core differentiator; do not cut|
+|Reviewer Assignment + Bias Detection|P0 (Must Have)|Technical + Feature|Core differentiator; do not cut|
+|Hash-Chain Audit Trail|P0 (Must Have)|Technical + Feature|Simple to implement; do not cut|
+|RAG Chatbot|P1 (Should Have)|Feature + Innovation|Demo with mock if RAG fails|
+|Analytics Dashboard|P1 (Should Have)|Feature + UX|Simplify to 3 charts if needed|
+|Promotion AI|P1 (Should Have)|Feature + Innovation|Simplify to one generated variant per channel if time-constrained|
+|Appeal Workflow|P2 (Nice to Have)|Feature|Remove if time-constrained|
+|Personalized Feedback NLG|P1 (Should Have)|UX + Innovation|Show Gemini output in demo|
+|GDPR Consent Flow|P1 (Should Have)|Technical compliance|At minimum: unchecked consent boxes, deletion endpoint, data-use copy|
+
+## 27. Risks and Mitigations
+
+|Risk|Likelihood|Severity|Impact|Mitigation|
+|---|---|---|---|---|
+|Gemini API rate limits during demo (free tier: 15 req/min)|High|High|Registration pipeline stalls; chatbot unresponsive|Circuit breaker + exponential backoff; cache Gemini outputs in Redis; pre-generate all embeddings on mock data before demo|
+|FaceScan scope creep into biometric matching|Medium|Critical|Regulatory risk; judge concern about ethics|Keep FaceScan limited to true-person/liveness validation; no cross-user matching; delete raw frames; implement deletion endpoint|
+|SentenceTransformer model load time on first request|High|Medium|First registration takes 30+ seconds|Pre-warm model by encoding a dummy sentence on Celery worker startup; use smaller model (all-MiniLM-L6-v2 is 22MB)|
+|pgvector ANN accuracy at small dataset size|Medium|Low|With only 50 mock users, cosine dedup less meaningful|Lower similarity threshold for demo; show similarity breakdown panel with raw numbers to judges|
+|scipy Hungarian algorithm on large n|Low|Medium|Assignment takes >60s for n=200+|Run as async Celery task; return 202 immediately; WebSocket when complete|
+|Blockchain-style audit adds complexity (proposed)|High|Medium|Overengineering wastes development time|MITIGATED: use hash-chain in PostgreSQL as described in this PRD — equivalent tamper-evidence at 1/10th the complexity|
+|Team runs out of time on Day 2|Medium|High|Key AI features incomplete|Follow priority matrix strictly (P0 before P1); mock any AI output with realistic pre-computed data for demo|
+|WebSocket connection stability on free-tier cloud|Medium|Medium|Live demo connection drops during judging|Implement auto-reconnect with exponential backoff in React; have fallback HTTP polling every 5s|
+|Inconsistent mock data makes AI look ineffective|Medium|High|Duplicate detection shows 0 duplicates; bias detection shows no alerts|Generate intentional duplicates (2 registrations with 85% similarity); generate intentional bias pattern (one reviewer scores 40% below average)|
+|Promotion AI gets cut during polish|Medium|Medium|Feature Coverage deduction because PDF explicitly requires it|Keep a minimal generator: one prompt, four channel outputs, editable variants, mock engagement counters|
+|Missing Analytics Dashboard|Already occurred|High|Feature Coverage deduction|RESOLVED: Analytics Dashboard & Predictive Insights fully detailed in Section 24|
