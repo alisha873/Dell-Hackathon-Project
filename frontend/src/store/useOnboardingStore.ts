@@ -20,6 +20,11 @@ export interface OnboardingState {
   };
   resumeUploaded: boolean;
   onboardingComplete: boolean;
+  aiData: {
+    parsed_resume: any;
+    skill_vector: any;
+    semantic_embedding: number[];
+  } | null;
 
   // Actions
   nextStep: () => void;
@@ -41,13 +46,14 @@ const initialState = {
   links: { linkedin: '', github: '' },
   resumeUploaded: false,
   onboardingComplete: false,
+  aiData: null,
 };
 
 export const useOnboardingStore = create<OnboardingState>()(
   devtools(
     (set) => ({
       ...initialState,
-      nextStep: () => set((state) => ({ step: Math.min(state.step + 1, 8) })),
+      nextStep: () => set((state) => ({ step: Math.min(state.step + 1, 7) })),
       prevStep: () => set((state) => ({ step: Math.max(state.step - 1, 1) })),
       setStep: (step: number) => set({ step }),
       updateData: (data) => set((state) => ({ ...state, ...data })),

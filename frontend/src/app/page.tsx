@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { motion } from "framer-motion";
 
 export default function LandingPage() {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -53,14 +54,13 @@ export default function LandingPage() {
       {/* TopNavBar */}
       <header className="bg-surface/80 dark:bg-surface/80 backdrop-blur-md border-b border-outline-variant/30 dark:border-outline/20 docked full-width top-0 sticky z-50">
         <nav className="flex justify-between items-center px-5 md:px-margin-desktop h-20 w-full max-w-[1280px] mx-auto">
-          <div className="flex-shrink-0 pt-2">
-            <Image src="/logo.svg" alt="HackOS" width={140} height={40} className="h-10 w-auto object-contain" />
-          </div>
+          <Link href="/" className="flex items-center mt-1">
+            <Image src="/logo.png" alt="HackOS" width={840} height={240} className="h-60 w-auto object-contain" />
+          </Link>
           <div className="hidden md:flex items-center gap-12">
-            <Link href="#" className="text-primary font-bold border-b-2 border-primary pb-1 text-body-md">Features</Link>
-            <Link href="#" className="text-on-surface-variant hover:text-primary transition-colors text-body-md">Solutions</Link>
-            <Link href="#" className="text-on-surface-variant hover:text-primary transition-colors text-body-md">Pricing</Link>
-            <Link href="#" className="text-on-surface-variant hover:text-primary transition-colors text-body-md">Documentation</Link>
+            <Link href="#features" className="text-on-surface-variant hover:text-primary font-bold pb-1 text-body-md transition-colors">Features</Link>
+            <Link href="/solutions" className="text-on-surface-variant hover:text-primary transition-colors text-body-md">Solutions</Link>
+            <Link href="/documentation" className="text-on-surface-variant hover:text-primary transition-colors text-body-md">Documentation</Link>
           </div>
           <div className="flex items-center gap-6">
             <Link href="/auth/participant" className="hidden md:block text-on-surface-variant hover:text-primary transition-colors text-body-md font-medium">Participant Login</Link>
@@ -76,17 +76,47 @@ export default function LandingPage() {
       <main>
         {/* Hero Section */}
         <section className="relative overflow-hidden pt-12 pb-24 md:pt-32 md:pb-40 hero-gradient">
-          <div className="absolute -top-24 -right-24 w-96 h-96 organic-shape-1 bg-secondary-container/30 blur-3xl"></div>
-          <div className="absolute -bottom-24 -left-24 w-80 h-80 organic-shape-1 bg-primary-container/20 blur-3xl"></div>
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+            className="absolute -top-24 -right-24 w-96 h-96 organic-shape-1 bg-secondary-container/30 blur-3xl"></motion.div>
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
+            className="absolute -bottom-24 -left-24 w-80 h-80 organic-shape-1 bg-primary-container/20 blur-3xl"></motion.div>
+          
           <div className="max-w-[1280px] mx-auto px-5 md:px-margin-desktop text-center relative z-10">
-            <span className="inline-block bg-primary/10 text-primary px-4 py-1.5 rounded-full text-label-sm mb-6">THE ULTIMATE HACKATHON OPERATING SYSTEM</span>
-            <h1 className="font-display-lg text-[32px] md:text-[48px] max-w-4xl mx-auto mb-6 leading-tight">
+            <motion.span 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="inline-block bg-primary/10 text-primary px-4 py-1.5 rounded-full text-label-sm mb-6">
+              THE ULTIMATE HACKATHON OPERATING SYSTEM
+            </motion.span>
+            
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="font-display-lg text-[32px] md:text-[48px] max-w-4xl mx-auto mb-6 leading-tight">
               Architecting the Future of <span className="italic text-secondary">Innovation</span>
-            </h1>
-            <p className="font-body-lg text-[18px] text-on-surface-variant max-w-2xl mx-auto mb-12 leading-relaxed">
+            </motion.h1>
+            
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="font-body-lg text-[18px] text-on-surface-variant max-w-2xl mx-auto mb-12 leading-relaxed">
               HackOS provides a tactile, professional-grade platform for organizing world-class hackathons with ease. From registration to real-time analytics.
-            </p>
-            <div className="flex flex-col md:flex-row items-center justify-center gap-4 mt-8">
+            </motion.p>
+            
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="flex flex-col md:flex-row items-center justify-center gap-4 mt-8">
               <Link href="/auth/participant">
                 <button className="bg-primary text-white px-10 py-4 rounded-full font-bold text-lg hover:shadow-xl hover:bg-primary/90 transition-all duration-300 transform hover:-translate-y-1">
                   Participant Login
@@ -97,39 +127,13 @@ export default function LandingPage() {
                   Organizer Login
                 </button>
               </Link>
-            </div>
+            </motion.div>
           </div>
         </section>
 
-        {/* Countdown Timer */}
-        <section className="py-12 bg-surface-container-low border-y border-outline-variant/20">
-          <div className="max-w-[1280px] mx-auto px-5 md:px-margin-desktop">
-            <div className="flex flex-col items-center">
-              <h3 className="font-label-sm text-on-surface-variant tracking-[0.2em] mb-6">NEXT GLOBAL SPRINT BEGINS IN</h3>
-              <div className="flex gap-6 md:gap-12">
-                <div className="text-center">
-                  <span className="block font-headline-md md:text-5xl text-tertiary font-bold mb-2">{formatNumber(timeLeft.days)}</span>
-                  <span className="font-label-sm text-on-surface-variant opacity-60">DAYS</span>
-                </div>
-                <div className="text-center">
-                  <span className="block font-headline-md md:text-5xl text-tertiary font-bold mb-2">{formatNumber(timeLeft.hours)}</span>
-                  <span className="font-label-sm text-on-surface-variant opacity-60">HOURS</span>
-                </div>
-                <div className="text-center">
-                  <span className="block font-headline-md md:text-5xl text-tertiary font-bold mb-2">{formatNumber(timeLeft.minutes)}</span>
-                  <span className="font-label-sm text-on-surface-variant opacity-60">MINUTES</span>
-                </div>
-                <div className="text-center">
-                  <span className="block font-headline-md md:text-5xl text-tertiary font-bold mb-2">{formatNumber(timeLeft.seconds)}</span>
-                  <span className="font-label-sm text-on-surface-variant opacity-60">SECONDS</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
 
         {/* Features Bento Grid */}
-        <section className="py-24 bg-surface">
+        <section id="features" className="py-24 bg-surface">
           <div className="max-w-[1280px] mx-auto px-5 md:px-margin-desktop">
             <div className="mb-20 max-w-2xl">
               <h2 className="font-headline-md text-[32px] mb-3">Curated Tools for Excellence</h2>
@@ -184,60 +188,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Statistics Section */}
-        <section className="py-24 bg-surface-container">
-          <div className="max-w-[1280px] mx-auto px-5 md:px-margin-desktop">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
-              <div className="p-6">
-                <span className="block font-display-lg text-primary text-6xl md:text-7xl mb-2">500+</span>
-                <span className="font-label-sm tracking-widest text-on-surface-variant uppercase">GLOBAL EVENTS</span>
-              </div>
-              <div className="p-6">
-                <span className="block font-display-lg text-secondary text-6xl md:text-7xl mb-2">100k+</span>
-                <span className="font-label-sm tracking-widest text-on-surface-variant uppercase">ACTIVE HACKERS</span>
-              </div>
-              <div className="p-6">
-                <span className="block font-display-lg text-tertiary text-6xl md:text-7xl mb-2">$2M+</span>
-                <span className="font-label-sm tracking-widest text-on-surface-variant uppercase">TOTAL PRIZES</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Testimonials */}
-        <section className="py-24 bg-surface">
-          <div className="max-w-[1280px] mx-auto px-5 md:px-margin-desktop">
-            <div className="text-center mb-16">
-              <h2 className="font-headline-md text-[32px]">Trusted by Pioneers</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Testimonial 1 */}
-              <div className="p-12 rounded-3xl border border-outline-variant/30 bg-surface flex flex-col gap-6 hover:border-primary/40 transition-colors">
-                <p className="font-body-lg text-[18px] text-on-surface italic">"The editorial feel of HackOS immediately set our event apart. It felt less like a tech conference and more like a high-end workshop. Our participants loved the clarity."</p>
-                <div className="flex items-center gap-6 mt-auto">
-                  <img className="w-14 h-14 rounded-full object-cover bg-surface-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDecfe9YPIg6_PBpgbIgbVBxrs3Nn8e-UBFd1emjk8WuI4f1UDTl9oFUPeYeZ3NpRESyTVYlkp5eTf3cVnmbeAF8qUGRNKuA140uBlIprztTkATMID3f_MY0D5m7GykFNGqr-wDW_oKVRPgy8xhsogyhKPIiVdhNhtYyfLoSNI4wXkCZ5jP17hzitLWW8OFN2NOA6O6DA0icVfW6caKzyc9w-YT1_pTeEF821f_dc_qlpaMi45_0Vct6rKSATZLWM2b38qfRAHzROw" alt="Elena Vance" />
-                  <div>
-                    <h4 className="font-label-md text-on-surface">Elena Vance</h4>
-                    <p className="text-label-sm text-on-surface-variant">Director, Lumina Hack</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Testimonial 2 */}
-              <div className="p-12 rounded-3xl border border-outline-variant/30 bg-surface flex flex-col gap-6 hover:border-secondary/40 transition-colors">
-                <p className="font-body-lg text-[18px] text-on-surface italic">"Seamless from start to finish. The real-time analytics allowed us to identify roadblocks in teams within minutes rather than hours. Truly architected for success."</p>
-                <div className="flex items-center gap-6 mt-auto">
-                  <img className="w-14 h-14 rounded-full object-cover bg-surface-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJyI5lPLqUfyDK1D_xKuI4DsIbxGIdMlzCqmpEDw7skscPS4N_0N13d_K6HOjnx4vWLsWfiw14QGWAf_4y2R_2zralWVCHCVLYkYLFFqcJS6OcdVG5K0DqIoI-0ze8BrzCPweCvxD-5Gmh1ayj3U2OV7KdvuxPg0yByVY_fsiZ7kB5rDLd91Z4GgkhGfsS5t048rgO5NC4RmWhSp8IMAFEsaXT0FB6D8T3osFOyhcplCWwYaYW52t48Q6CmT7_xPAGJ9kOygv4_IE" alt="Marcus Chen" />
-                  <div>
-                    <h4 className="font-label-md text-on-surface">Marcus Chen</h4>
-                    <p className="text-label-sm text-on-surface-variant">Lead Organizer, DevSprint Int'l</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Final CTA */}
         <section className="py-24 bg-surface relative overflow-hidden">
           <div className="max-w-4xl mx-auto px-5 text-center relative z-10">
@@ -254,7 +204,7 @@ export default function LandingPage() {
       <footer className="bg-surface-container dark:bg-surface-container-high border-t border-outline-variant/20">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 px-5 md:px-margin-desktop py-12 max-w-[1280px] mx-auto">
           <div className="col-span-1 md:col-span-1">
-            <Image src="/logo.svg" alt="HackOS" width={120} height={34} className="h-8 w-auto object-contain mb-4" />
+            <Image src="/logo.png" alt="HackOS" width={720} height={204} className="h-[204px] w-auto object-contain mb-4" />
             <p className="text-on-surface-variant text-[16px] leading-relaxed opacity-80">
               End-to-End Hackathon Management Platform
             </p>
