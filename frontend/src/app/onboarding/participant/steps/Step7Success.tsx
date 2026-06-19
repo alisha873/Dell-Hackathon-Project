@@ -4,18 +4,15 @@ import { useOnboardingStore } from "@/store/useOnboardingStore";
 import { ArrowRight, CheckCircle2, QrCode, Code2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function Step7Success() {
   const { fullName, updateData, aiData } = useOnboardingStore();
   const router = useRouter();
-  const [participantId, setParticipantId] = useState("");
-
-  useEffect(() => {
-    // Generate a random ID like "HK-2024-X7B9"
+  const [participantId] = useState(() => {
     const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
-    setParticipantId(`HK-24-${randomStr}`);
-  }, []);
+    return `HK-24-${randomStr}`;
+  });
 
   const handleFinish = () => {
     updateData({ onboardingComplete: true });

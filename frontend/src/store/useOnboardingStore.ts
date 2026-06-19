@@ -1,6 +1,22 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+export interface ParsedResumeData {
+  name?: string | null;
+  college_name?: string | null;
+  degree?: string | null;
+  github_url?: string | null;
+  raw_skills?: string[];
+  experience_summary?: string;
+  projects?: string[];
+}
+
+export interface OnboardingAiData {
+  parsed_resume: ParsedResumeData;
+  skill_vector: Record<string, number>;
+  semantic_embedding: number[];
+}
+
 export interface OnboardingState {
   step: number;
   fullName: string;
@@ -20,11 +36,7 @@ export interface OnboardingState {
   };
   resumeUploaded: boolean;
   onboardingComplete: boolean;
-  aiData: {
-    parsed_resume: any;
-    skill_vector: any;
-    semantic_embedding: number[];
-  } | null;
+  aiData: OnboardingAiData | null;
 
   // Actions
   nextStep: () => void;
