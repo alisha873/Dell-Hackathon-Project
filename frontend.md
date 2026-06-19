@@ -261,6 +261,60 @@ Clicking Analysis opens:
 
 ---
 
+### **Reviewer Assignment Panel (Admin)**
+
+**Purpose:** Trigger assignment, visualize results, compare AI vs random, confirm and dispatch.
+
+**Components:**
+1. **AssignmentTriggerCard:**
+   - K selector (1-3 reviews per project), default=2
+   - "Run Assignment" button (disabled if job is running)
+   - Live progress bar with WS stage updates
+
+2. **AssignmentMetricsPanel:**
+   - AI Assignment Score vs Random Score comparison
+   - Improvement %
+   - Workload Balance status (Within ±10%)
+   - Unresolvable Conflicts indicator
+
+3. **AssignmentTable:**
+   - Columns: Reviewer Name | Project Title | Expertise Score | Conflict Flag | Status
+   - Color coding: green (>0.8), yellow (0.6-0.8), red (<0.6)
+
+4. **WorkloadDistributionChart:**
+   - BarChart showing assignments per reviewer with ±10% target band.
+
+5. **ConflictGraphPanel:**
+   - Force-directed graph showing reviewers and teams as nodes, with conflict links (red edges).
+
+---
+
+### **Bias Monitoring Dashboard (Admin)**
+
+**Purpose:** Real-time bias detection monitoring and normalization actions.
+
+**Components:**
+1. **FairnessScoreGauge:**
+   - Radial gauge (0-100), color-coded. Updates via WebSocket `FAIRNESS_SCORE_UPDATED`.
+2. **BiasAlertFeed:**
+   - Timeline of active alerts. Shows severity badge, p-value, effect size, and affected projects.
+   - Action buttons: "Acknowledge", "Renormalize", "Request Re-evaluation".
+3. **ReviewerOutlierHeatmap:**
+   - Table visualizing reviewers' Mean Score, Z-Score, N Evaluations, and CV.
+4. **BiasAlertToast:**
+   - Real-time toast notifications for alerts (e.g., "⚠️ INSTITUTIONAL BIAS DETECTED — p=0.003").
+
+---
+
+### **Audit Trail Viewer (Admin)**
+
+**Components:**
+1. **ChainIntegrityBanner:** Indicates if chain is intact or breached, with a "Verify Now" button.
+2. **AuditLogTable:** Shows Seq#, Timestamp, Action, Entity, Actor, Hash.
+3. **HashChainVisualizer:** Visual representation of linked blocks (`[hash1]←[hash2]←[hash3]`).
+
+---
+
 ### **Reviewer Assignment Screen**
 
 **Visualization:** Reviewer ←→ Team
@@ -606,15 +660,22 @@ Shows all teams, sorted by compatibility.
 
 ---
 
-### **Results Page**
+### **Results Page / Leaderboard**
 
-**Display:**
-- Rank
-- Final Score
-- Confidence Score
-- Reviewer Comments
-- AI Feedback
-- Leaderboard
+**Purpose:** Show rankings with confidence intervals, score breakdowns, and personalized feedback.
+
+**Components:**
+1. **LeaderboardTable:**
+   - Rank | Team Name | Final Score | Confidence % | CI Range | Feedback Status
+   - Animated rank badges. CI range shown as a mini range slider.
+   - "View Feedback" button.
+2. **ScoreBreakdownAccordion:**
+   - Expandable breakdown per team.
+   - Horizontal bar chart comparing raw_avg vs hackathon_avg per criterion.
+3. **FeedbackModal:**
+   - Full Gemini-generated personalized feedback (or template fallback if rate-limited).
+4. **ResultsConfidenceExplainer:**
+   - Info card explaining Confidence Score (based on Krippendorff's alpha / inter-rater reliability).
 
 ---
 
@@ -645,7 +706,11 @@ Landing Page → Login / Signup → Select Role: Reviewer → Reviewer Dashboard
 - Assigned Hackathons
 - Assigned Teams (Pending Evaluations)
 - Completed Reviews (Completed Evaluations)
-- Consistency Score
+
+**Components:**
+1. **AssignmentQueue:** Card per assignment showing project title, expertise match badge, and status.
+2. **ReliabilityScoreCard:** Visualizing the reviewer's consistency score based on peer alignment (e.g., 82/100).
+3. **DeadlineCountdown:** Real-time countdown to the evaluation deadline (changes color as deadline approaches).
 
 ---
 

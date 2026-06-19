@@ -21,7 +21,7 @@
 - **Gamified Leaderboards**: Real-time evaluation countdowns and reviewer consistency ranks.
 - Skill-vector coverage optimization for team formation
 
-**Tech Stack:** React + TypeScript + Tailwind (frontend), Supabase (PostgreSQL + pgvector, Auth, Edge Functions) + Python (AI microservice), sentence-transformers + Gemini Flash (AI), Mocked data (for FaceScan liveness validation), WebSockets (real-time via Supabase Realtime).
+**Tech Stack:** React + TypeScript + Tailwind (frontend), Supabase (PostgreSQL + pgvector, Auth, RLS) + Python Microservice (FastAPI + Celery + SciPy/NumPy, required for statistical tests since Edge Functions cannot run them), sentence-transformers + Gemini Flash (AI), Mocked data (for FaceScan liveness validation), WebSockets (real-time via Supabase Realtime / Redis PubSub).
 
 ---
 
@@ -401,7 +401,14 @@ Results published → participants see:
 
 ## 8. Detailed AI System Design Overview
 
-### 8.1 AI Components Map
+### 8.1 Hybrid Architecture Rationale
+
+The core system uses a hybrid approach:
+- **Supabase:** Provides Edge caching, Auth, Row Level Security (RLS), and the primary PostgreSQL database (with pgvector).
+- **Python Microservice:** A FastAPI + Celery backend is required because critical components (like SciPy for statistical bias tests and NumPy for assignment algorithms) cannot run within Supabase Edge Functions.
+- **Redis:** Manages Celery task queues, atomic locks for deduplication/audit logs, and Pub/Sub for bridging real-time WebSocket events.
+
+### 8.2 AI Components Map
 
 ```
                     ┌─────────────────────────────────────────────────────┐
@@ -411,23 +418,21 @@ Results published → participants see:
                                        │ cached by Redis (content SHA-256 key)
                                        ▼
 ┌───────────────┐    ┌─────────────────────────────────────────────────┐
-│  REGISTRATION │    │           LOCAL AI PIPELINE (no API)            │
-│  INTELLIGENCE │───▶│  sentence-transformers/all-MiniLM-L6-v2        │
-│               │    │  → unified embeddings (384-dim)                 │
-│  RapidFuzz    │    │  → stored in pgvector                           │
-│  Device FP    │    │  RapidFuzz (Jaro-Winkler) for name/college      │
+│  REGISTRATION │    │           PYTHON MICROSERVICE PIPELINE          │
+│  INTELLIGENCE │───▶│  sentence-transformers/all-MiniLM-L6-v2         │
+│               │    │  → unified embeddings (384-dim) stored in pgvector│
+│  RapidFuzz    │    │  RapidFuzz (Jaro-Winkler) for name/college      │
 └───────────────┘    └─────────────────────────────────────────────────┘
                                        │
          ┌─────────────────────────────┼────────────────────────────┐
          ▼                             ▼                            ▼
 ┌─────────────────┐    ┌───────────────────────────┐    ┌──────────────────────┐
-│  TEAM FORMATION │    │  REVIEWER ASSIGNMENT       │    │  BIAS DETECTION       │
-│                 │    │                            │    │                       │
-│  Skill vectors  │    │  pgvector cosine search    │    │  scipy.stats          │
-│  + coverage     │    │  + scipy                   │    │  mannwhitneyu         │
-│  scoring        │    │  linear_sum_assignment     │    │  kruskal              │
-│  + diversity    │    │  (Hungarian algorithm)     │    │  zscore normalization │
-│  optimization   │    │                            │    │  Krippendorff alpha   │
+│  TEAM FORMATION │    │  REVIEWER ASSIGNMENT      │    │  BIAS DETECTION      │
+│                 │    │                           │    │                      │
+│  Skill vectors  │    │  pgvector cosine search   │    │  SciPy:              │
+│  + coverage     │    │  + SciPy                  │    │  mannwhitneyu,       │
+│  scoring        │    │  linear_sum_assignment    │    │  kruskal, zscore     │
+│  + diversity    │    │  (Hungarian algorithm)    │    │  + Krippendorff alpha│
 └─────────────────┘    └───────────────────────────┘    └──────────────────────┘
          │                             │                            │
          └─────────────────────────────▼────────────────────────────┘
@@ -435,27 +440,23 @@ Results published → participants see:
                               ┌────────────────┐
                               │  AUDIT TRAIL   │
                               │                │
-                              │  SHA-256       │
-                              │  Hash Chain    │
+                              │  SHA-256 Chain │
                               │  PostgreSQL    │
+                              │  Advisory Locks│
                               └────────────────┘
 ```
 
-### 8.2 AI Component Selection Rationale
+### 8.3 AI Component Selection Rationale
 
 | Component | Choice | Why | Alternative Considered |
 |---|---|---|---|
 | Text embeddings | `all-MiniLM-L6-v2` (local) | 384-dim, 80ms/call, no API cost, runs on CPU | OpenAI text-embedding-3-small: good but costs money + network latency |
 | Skill extraction | Gemini Flash | Structured JSON output, understands domain context better than classification | spaCy NER: faster but needs domain fine-tuning |
-| Assignment optimizer | scipy `linear_sum_assignment` | Hungarian algorithm, exact O(n³), handles constraint weights | Google OR-Tools: more powerful but heavier setup for a 3-day MVP |
-| Bias statistics | scipy.stats (mannwhitneyu, kruskal, zscore) | Non-parametric, correct for small samples, no normality assumption | t-test: wrong for ordinal score data |
+| Assignment optimizer | scipy `linear_sum_assignment` | Hungarian algorithm, exact O(n³), handles constraint weights | Google OR-Tools: more powerful but heavier setup |
+| Bias statistics | scipy.stats (mannwhitneyu, kruskal, zscore) | Non-parametric, correct for small samples, no normality assumption. Utilizes Bonferroni corrections. | t-test: wrong for ordinal score data |
 | NLG feedback | Gemini Flash | Contextual, personalized output from score data | Template-based: faster but less impressive in demo |
 | Chatbot retrieval | pgvector + sentence-transformers | Same model as registration, single stack | Pinecone: managed but adds external dependency |
-| Fuzzy matching | RapidFuzz (Jaro-Winkler) | Fast, handles transliterations well (e.g., Arjun vs. Arjun Kumar) | difflib: slower, less robust to transliterations |
-
----
-
----
+| Fuzzy matching | RapidFuzz (Jaro-Winkler) | Fast, handles transliterations well | difflib: slower, less robust |
 
 ## 9. Registration Intelligence Architecture
 
@@ -643,16 +644,11 @@ unified_emb = model.encode(
 
 ### 11.1 Expertise Matching
 
-Project descriptions and reviewer expertise profiles are both embedded using the same SentenceTransformer model. Cosine similarity forms the base expertise match score.
-
-```text
-project_emb  = model.encode(f'{title} {description} {tech_stack}')
-reviewer_emb = model.encode(f'{expertise_domains} {bio} {past_work}')
-expertise_sim = cosine_similarity(project_emb, reviewer_emb)
-```
+Project descriptions and reviewer expertise profiles are embedded using SentenceTransformer (`all-MiniLM-L6-v2`). Cosine similarity forms the base expertise match score.
 
 ### 11.2 Multi-Objective Cost Matrix
 
+The Assignment Engine runs inside a Celery worker to avoid blocking API requests. A cost matrix is constructed:
 ```text
 cost[i][j] = 1 - match_score(reviewer_i, project_j)
 
@@ -666,96 +662,63 @@ match_score = (
 
 ### 11.3 Conflict Detection Logic
 
-- Same organizational affiliation (college/company): conflict_score = 1.0 — reviewer cannot review their own institution
+To avoid false positive factories, we avoid IP /24 subnet checks. Instead we rely on:
+- **Institution Match:** Reviewers cannot review teams from the same college/company.
+- **Declared Conflicts:** Explicitly declared conflicts during reviewer onboarding.
+- **GitHub Co-authorship (stretch):** Identifying shared repo contributions.
 
-- Shared IP subnet (same /24 network): conflict_score = 0.7 — potential cohabitation
+### 11.4 Assignment Algorithm (Hungarian + Matrix Padding)
 
-- If any conflict signal detected: cost[i][j] = 1.0 (effectively excluded from assignment)
+We use `scipy.optimize.linear_sum_assignment` which provides an exact O(n³) solution. To handle cases where `n_slots != n_reviewers`, the cost matrix is dynamically padded.
+The algorithm guarantees the best global minimum cost (highest overall expertise + balance) compared to naive greedy assignments.
 
-### 11.4 Assignment Algorithm
+### 11.5 Dynamic Reassignment & Workload Verification
 
-```text
-from scipy.optimize import linear_sum_assignment
-row_ind, col_ind = linear_sum_assignment(cost_matrix)
-# O(n^3) — for n=100 projects, 20 reviewers: ~50ms
-# For n=500: ~6 seconds — run as async Celery task
-
-# Load balancing constraint:
-max_per_reviewer = ceil(len(projects) / len(reviewers)) * 1.1
-# If any reviewer exceeds limit: re-assign overflow to next-best reviewer
-```
-
-### 11.5 Dynamic Reassignment
-
-- Celery beat checks reviewer submission status every 30 minutes during evaluation window
-
-- If reviewer misses T-6h warning: admin alerted with suggested reassignment
-
-- If reviewer misses T-0 (deadline): system auto-reassigns to reviewer with lowest current load and best domain match
-
-- Reassignment triggers WebSocket notification to affected reviewer and admin
-
-### 11.6 Workload Variance Guarantee
-
-```text
-target = len(projects) / len(reviewers)
-for each reviewer r:
-    assert abs(assigned_count[r] - target) / target <= 0.10  # +/-10% variance
-# If violation detected: swap lowest-priority assignment between over/under-loaded reviewers
-```
+- Celery tasks verify workload distributions to ensure reviewers are within ±10% of the target allocation.
+- If a reviewer misses the T-6h warning, the admin receives an alert with an auto-reassign suggestion.
+- Reassignment triggers Redis Pub/Sub events that flow via WebSockets to the frontend.
 
 ## 12. Bias Detection Architecture
 
-### 12.1 Reviewer-Level Outlier Detection
+### 12.1 Statistical Rigor & Family-wise Error Control
 
-Triggered on every evaluation score submission. Detects reviewers who are consistently lenient or harsh relative to the peer group.
+Running multiple bias tests simultaneously increases the chance of false positives. HackOS uses **Bonferroni corrections** (`α=0.0083` for 6 tests) to ensure alerts are statistically rigorous, preventing alert fatigue. The bias analysis runs entirely inside a Celery worker. Active alerts are deduplicated using Redis locks.
 
-```text
-reviewer_scores = [all scores submitted by reviewer_r]
-all_reviewer_means = [mean(scores) for each reviewer]
-z_score = (mean(reviewer_scores) - mean(all_reviewer_means)) / std(all_reviewer_means)
-if abs(z_score) > 2.0:
-    create_bias_alert(type='REVIEWER_OUTLIER', severity='WARNING', reviewer=r)
-```
+### 12.2 Demographic & Outlier Bias Tests
 
-### 12.2 Demographic Bias Tests
-
-> NOTE: Demographic bias tests require demographic data fields in registration. These fields must be strictly optional and GDPR-compliant with explicit consent. Without demographic data, the system skips these tests and logs 'insufficient demographic data'.
-
-|Bias Dimension|Statistical Test|Trigger Threshold|Alert Severity|
+|Bias Dimension|Statistical Test|Effect Size Metric|Trigger Threshold (Adjusted)|
 |---|---|---|---|
-|Gender bias|Mann-Whitney U test|p < 0.10|WARNING; p < 0.05: ALERT|
-|Geographic bias|Kruskal-Wallis H test|p < 0.10|WARNING; p < 0.05: ALERT|
-|Institutional bias|One-way ANOVA + Tukey HSD|p < 0.10|WARNING; p < 0.05: ALERT|
-|Technology stack bias|Score comparison by primary tech tag|Effect size d > 0.3|WARNING; d > 0.5: ALERT|
-|Temporal drift|Spearman correlation: score vs eval sequence|\|rho\| > 0.4|WARNING: reviewer fatigue signal|
-|Criterion inconsistency|CV (coeff of variation) per criterion|CV > 0.5 for one reviewer|WARNING: review criteria misunderstood|
+|Reviewer Outlier|Z-score relative to global mean|Z-score|\|z\| > 2.0 (Warning) or > 3.0 (Alert)|
+|Gender bias|Mann-Whitney U test|Rank-Biserial r|p_adjusted < 0.0083|
+|Geographic bias|Kruskal-Wallis H test|Eta-squared|p_adjusted < 0.0083|
+|Institutional bias|Mann-Whitney U / Kruskal-Wallis|Rank-Biserial r / Eta-squared|p_adjusted < 0.0083|
+|Temporal drift|Spearman correlation (score vs sequence)|Spearman rho|\|rho\| > 0.4|
+|Criterion inconsistency|Coefficient of Variation (CV)|CV|CV > 0.5 for one reviewer|
 
-### 12.3 Score Normalization Pipeline
+### 12.3 Inter-Rater Reliability (Krippendorff's Alpha)
 
+To compute final rankings confidence, HackOS calculates **Krippendorff's Alpha** across shared projects. This represents the level of agreement between reviewers.
+- 1.0 = Perfect agreement
+- 0.0 = Agreement expected by chance
+- <0.0 = Systematic disagreement
+
+### 12.4 Score Normalization Pipeline
+
+Raw scores are inherently noisy due to reviewer harshness/leniency.
 ```text
 # Per-reviewer Z-score normalization
 normalized[r][p] = (raw[r][p] - mean(raw[r])) / std(raw[r])
 
 # Global rescaling (bring back to original score range)
 final_normalized[r][p] = normalized[r][p] * global_std + global_mean
-
-# Aggregate across reviewers (weighted by reliability score)
-reliability[r] = 1 / (1 + consistency_penalty[r])  # lower penalty = higher reliability
-final_score[p] = weighted_mean(final_normalized[:, p], weights=reliability)
 ```
 
-### 12.4 Bias Alert Workflow
+### 12.5 Audit Trail Integrity
 
-1. Alert created with: reviewer_id, alert_type, severity, statistical_detail, affected_projects
-
-1. Admin sees alert in dashboard: severity badge + explanation + affected submissions highlighted
-
-1. Admin actions: Acknowledge Only / Trigger Re-normalization / Request Re-evaluation from different reviewer
-
-1. All admin actions logged in audit trail
-
-1. Fairness score = 1 - max(normalized_effect_size across all detected biases) — shown on dashboard
+All bias alerts, review submissions, and administrative actions are logged to a PostgreSQL `audit_log` table.
+- A **SHA-256 hash chain** links each log entry sequentially.
+- **Concurrent Insert Protection:** `pg_advisory_xact_lock` guarantees chain integrity even under high concurrent load during the evaluation deadline rush.
+- **GDPR Anonymization:** Erasure requests nullify actor_ids while maintaining chain integrity to comply with data retention rules.
 
 ## 13. Communication AI Architecture
 
