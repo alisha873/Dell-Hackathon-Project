@@ -72,10 +72,7 @@ class SkillVector(BaseModel):
 class ParsedResume(BaseModel):
     name: Optional[str] = None
     college_name: Optional[str] = None
-    degree: Optional[str] = None
-    year_of_study: Optional[str] = None
     github_url: Optional[str] = None
-    linkedin_url: Optional[str] = None
     raw_skills: list[str] = Field(default_factory=list)
     experience_summary: str = ""
     projects: list[str] = Field(default_factory=list)
@@ -85,7 +82,6 @@ class Participant(BaseModel):
     id: str
     parsed_resume: ParsedResume
     skill_vector: SkillVector
-    semantic_embedding: Optional[list[float]] = None
     team_id: Optional[str] = None
 
 
@@ -97,33 +93,8 @@ class PSRequirement(BaseModel):
     team_size: int
 
 
-from enum import Enum
-
-class InviteStatus(str, Enum):
-    PENDING = "pending"
-    ACCEPTED = "accepted"
-    DECLINED = "declined"
-    CANCELLED = "cancelled"
-
-class InviteDirection(str, Enum):
-    LEADER_TO_PARTICIPANT = "leader_to_participant"
-    PARTICIPANT_TO_LEADER = "participant_to_leader"
-
-class Invite(BaseModel):
-    invite_id: str
-    team_id: str
-    participant_id: str
-    direction: InviteDirection
-    initiated_by_id: str
-    status: InviteStatus = InviteStatus.PENDING
-    created_at: str
-    responded_at: str | None = None
-
 class Team(BaseModel):
     team_id: str
     name: str
-    leader_id: str
     member_ids: list[str] = Field(default_factory=list)
     slots_remaining: int
-    is_open: bool = True
-    is_locked: bool = False
