@@ -299,7 +299,7 @@ export default function OrganizerDashboard() {
               <li>
                 <Link href="#" className="flex items-center gap-2 text-sm text-secondary hover:translate-x-1 transition-transform">
                   <span className="material-symbols-outlined text-[16px]">article</span>
-                  HackOS Template 2024
+                  HackOS Template 2026
                 </Link>
               </li>
               <li>
