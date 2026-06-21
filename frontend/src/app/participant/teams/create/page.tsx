@@ -1,37 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 
-const MOCK_PARTICIPANTS = [
-  {
-    id: "p1",
-    name: "Alex Rivera",
-    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuCEo20hrQSF2YwwJS4Ye6B9OV12dT1HKGMTA_Ve13ZF1kqyHYbl-qk8jbZKq35_fPbv6v3kb6Q8Q0e2PR9BYATQ7AtKp5fQZYab5C2eJKCA5V1_k84icV4JlehdKbVGL0L4N9NWSJ7Yf_dLvrUrqUUKzzWCLP6x48MnbtyxVbVZLMzPISgtav3qyvjyo8xutGO01T-u0ak5lBmRdNI6_CoFd2Ho_Ou8HVVM_Erfu2Mg51cBVehmQH_r5AsDJHVgKRePb9FO6UarPY8",
-    skills: ["TensorFlow", "Rust", "MLOps"],
-    skill_vector: { ai_ml: 0.9, backend: 0.8, hardware: 0.3 } as Record<string, number>
-  },
-  {
-    id: "p2",
-    name: "Jordan Chen",
-    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuA5-WSK9nwbsH03xvjPu3LdIislU7f8HM9ABzU_pqrFjgp-7jjXWRKzxjeyV8YQJuvAKuts8JXpIOTtrxFfWXiHoqW1WoIqlpleSmvI__qCmWOwfpkGLpB85tDfIGEQS0b0pK-a9d6GtDIfb6We51nIDcKUaBNhzI28bGFlIH4lmOWrnmPEQeBth7l4UrBHd0XJyEvKILwGQQOFk8MjdK25CwazyXF1atpAULSOoHBmOp4bGfjc_cYuDOX9rJQxVNangaph7vJFbLk",
-    skills: ["Go", "Distributed Systems", "PostgreSQL"],
-    skill_vector: { backend: 0.9, cloud: 0.8, database: 0.9 } as Record<string, number>
-  },
-  {
-    id: "p3",
-    name: "Samira Tariq",
-    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuCy6hLar6lVOcFsOiDN0W40PpfburCY8toVgMujwoyT-x1w9auzVkVjN7BVvJc8V665ZoVcMRvlH_-qrenXGlQN-rfcF-x4eVwry6uhkT9Btn-f0q8gKWs4hcm0cWiazxqXakf8Fikbq7NrFeuoZPGNoXkFnNxUAEsNq7PMlFNY5julvEMr4F99Er9RFO_ZVRJXKAWpynPlZk5eQRz_rRVoq0hKGAK-GDdQ92ud2gD3DhAKhNnTrtMYwv2nhiAYgNfwrOhksxnO0r8",
-    skills: ["Figma", "React", "User Research"],
-    skill_vector: { ui_ux: 0.9, frontend: 0.7, design: 0.9 } as Record<string, number>
-  }
-];
+type Participant = {
+  id: string;
+  name?: string;
+  avatar?: string;
+  declared_skills?: string[];
+  skill_vector?: Record<string, number>;
+}
 
-// In a real scenario, this is derived from the team's needs + problem statement
-const TEAM_REQUIRED_VECTOR: Record<string, number> = { ai_ml: 0.8, backend: 0.6, ui_ux: 0.5 };
+function buildRequiredVector(skills: string[]) {
+  return skills.reduce((acc, skill) => {
+    acc[skill.toLowerCase().replace(/\s+/g, '_')] = 1;
+    return acc;
+  }, {} as Record<string, number>);
+}
 
 function calculateRecruitMatch(participantVector: Record<string, number>, requiredVector: Record<string, number>) {
   let score = 0;
@@ -52,6 +40,8 @@ export default function CreateTeam() {
   const [teamSize, setTeamSize] = useState(4);
   const [activeTab, setActiveTab] = useState("Invite Friends");
   const [teamName, setTeamName] = useState("");
+  const [requiredSkills, setRequiredSkills] = useState<string[]>(["Python", "UI/UX"]);
+  const [newSkill, setNewSkill] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
 
@@ -85,10 +75,25 @@ export default function CreateTeam() {
     }
   };
 
-  const sortedRecruits = [...MOCK_PARTICIPANTS].map(p => ({
+  const [recruits, setRecruits] = useState<Participant[]>([]);
+  const [loadingRecruits, setLoadingRecruits] = useState(true);
+
+  useEffect(() => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    setLoadingRecruits(true);
+    fetch(`${apiUrl}/participants/`)
+      .then(async (r) => { if (!r.ok) throw new Error(`Status ${r.status}`); return r.json(); })
+      .then((data) => setRecruits(data || []))
+      .catch((e) => console.error("Failed to load participants:", e))
+      .finally(() => setLoadingRecruits(false));
+  }, []);
+
+  const currentRequiredVector = buildRequiredVector(requiredSkills);
+
+  const sortedRecruits = [...recruits].map(p => ({
     ...p,
-    matchScore: calculateRecruitMatch(p.skill_vector, TEAM_REQUIRED_VECTOR)
-  })).sort((a, b) => b.matchScore - a.matchScore);
+    matchScore: calculateRecruitMatch(p.skill_vector || {}, currentRequiredVector)
+  })).sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
 
   return (
     <>
@@ -135,73 +140,71 @@ export default function CreateTeam() {
             
             {/* Required Skills Module */}
             <div className="bg-surface-container-lowest rounded-xl p-stack-md border border-outline-variant/20 shadow-[0_20px_40px_-15px_rgba(214,203,191,0.4)]">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <h2 className="font-headline-sm text-[24px] text-primary">Required Skills</h2>
-                <button className="flex items-center gap-2 text-primary font-label-md hover:opacity-70 transition-opacity">
-                  <span className="material-symbols-outlined">add_circle</span>
-                  Add Skill
-                </button>
+                <div className="flex gap-2 items-center w-full sm:w-auto">
+                  <input
+                    value={newSkill}
+                    onChange={(e) => setNewSkill(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const skill = newSkill.trim();
+                        if (skill && !requiredSkills.includes(skill)) {
+                          setRequiredSkills([...requiredSkills, skill]);
+                        }
+                        setNewSkill('');
+                      }
+                    }}
+                    className="w-full sm:w-72 bg-white border border-outline-variant rounded-lg px-4 py-3 focus:ring-2 focus:ring-tertiary outline-none"
+                    placeholder="Add a new skill"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const skill = newSkill.trim();
+                      if (!skill) return;
+                      if (!requiredSkills.includes(skill)) {
+                        setRequiredSkills([...requiredSkills, skill]);
+                      }
+                      setNewSkill('');
+                    }}
+                    className="inline-flex items-center gap-2 bg-primary text-white px-4 py-3 rounded-xl font-bold hover:bg-primary/90 transition-colors"
+                  >
+                    <span className="material-symbols-outlined">add_circle</span>
+                    Add Skill
+                  </button>
+                </div>
               </div>
-              <div className="space-y-4">
-                {/* Skill Item 1 */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-surface-container-low rounded-lg border border-outline-variant/10 gap-4">
-                  <div className="flex items-center gap-3">
-                    <span className="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center text-primary">
-                      <span className="material-symbols-outlined">code</span>
-                    </span>
-                    <div>
-                      <p className="font-label-md font-bold text-on-surface">Python Specialist</p>
-                      <p className="text-[12px] text-on-surface-variant">Data processing & backend</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[12px] uppercase tracking-wider text-on-surface-variant font-bold">Crucial</span>
-                      <div className="w-10 h-5 bg-primary rounded-full relative cursor-pointer">
-                        <div className="absolute right-1 top-1 w-3 h-3 bg-white rounded-full"></div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-label-sm text-secondary block">1/2 Open</span>
-                      <div className="w-24 h-1 bg-outline-variant rounded-full mt-1 overflow-hidden">
-                        <div className="bg-secondary w-1/2 h-full"></div>
-                      </div>
-                    </div>
-                    <button className="text-on-surface-variant hover:text-error transition-colors">
-                      <span className="material-symbols-outlined">delete</span>
-                    </button>
-                  </div>
-                </div>
 
-                {/* Skill Item 2 */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-surface-container-low rounded-lg border border-outline-variant/10 gap-4">
-                  <div className="flex items-center gap-3">
-                    <span className="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary">
-                      <span className="material-symbols-outlined">palette</span>
-                    </span>
-                    <div>
-                      <p className="font-label-md font-bold text-on-surface">UI/UX Designer</p>
-                      <p className="text-[12px] text-on-surface-variant">High-fidelity prototyping</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[12px] uppercase tracking-wider text-on-surface-variant font-bold">Preferred</span>
-                      <div className="w-10 h-5 bg-outline-variant rounded-full relative cursor-pointer">
-                        <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full"></div>
+              <div className="space-y-4">
+                {requiredSkills.length === 0 ? (
+                  <div className="text-on-surface-variant">No skills added yet. Add a skill to define your team’s needs.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {requiredSkills.map((skill) => (
+                      <div key={skill} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-surface-container-low rounded-lg border border-outline-variant/10 gap-4">
+                        <div className="flex items-center gap-3">
+                          <span className="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center text-primary text-[18px]">{skill.charAt(0).toUpperCase()}</span>
+                          <div>
+                            <p className="font-label-md font-bold text-on-surface">{skill}</p>
+                            <p className="text-[12px] text-on-surface-variant">This skill is required for your team.</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-[12px] uppercase tracking-wider text-on-surface-variant font-bold">Required</span>
+                          <button
+                            type="button"
+                            onClick={() => setRequiredSkills(requiredSkills.filter((s) => s !== skill))}
+                            className="text-on-surface-variant hover:text-error transition-colors"
+                          >
+                            <span className="material-symbols-outlined">delete</span>
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-label-sm text-secondary block">0/1 Open</span>
-                      <div className="w-24 h-1 bg-outline-variant rounded-full mt-1 overflow-hidden">
-                        <div className="bg-secondary w-full h-full"></div>
-                      </div>
-                    </div>
-                    <button className="text-on-surface-variant hover:text-error transition-colors">
-                      <span className="material-symbols-outlined">delete</span>
-                    </button>
+                    ))}
                   </div>
-                </div>
+                )}
               </div>
             </div>
             <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/20 shadow-[0_20px_40px_-15px_rgba(214,203,191,0.4)] overflow-hidden">
@@ -292,18 +295,15 @@ export default function CreateTeam() {
               <div className="space-y-4 overflow-y-auto max-h-[400px] pr-2">
                 {sortedRecruits.map((recruit) => (
                   <div key={recruit.id} className="bg-white p-4 rounded-xl border border-outline-variant/20 hover:border-primary/50 transition-all group">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <img className="w-12 h-12 rounded-lg object-cover bg-surface-variant" src={recruit.avatar} alt={recruit.name} />
-                        <div>
-                          <h3 className="font-label-md font-bold text-on-surface">{recruit.name}</h3>
-                          <p className="text-[12px] text-tertiary font-bold">{recruit.matchScore}% Match</p>
-                        </div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h3 className="font-label-md font-bold text-on-surface">{recruit.name}</h3>
+                        <p className="text-[12px] text-tertiary font-bold">{recruit.matchScore}% Match</p>
                       </div>
                       <button className="bg-primary text-white text-[12px] px-3 py-1.5 rounded-full font-bold hover:scale-105 transition-transform">Invite</button>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {recruit.skills.map((skill) => (
+                      {(recruit.declared_skills || (recruit as any).skills || []).map((skill) => (
                         <span key={skill} className="text-[10px] px-2 py-1 bg-surface-container-low rounded-md">{skill}</span>
                       ))}
                     </div>

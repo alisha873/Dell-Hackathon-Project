@@ -28,6 +28,9 @@ class TeamOut(BaseModel):
     team_id: uuid.UUID | str
     name: Optional[str] = None
     member_ids: Optional[List[uuid.UUID | str]] = []
+    member_count: Optional[int] = None
+    max_team_size: Optional[int] = None
+    slots_remaining: Optional[int] = None
     coverage_score: Optional[float] = None
     diversity_score: Optional[float] = None
     formation_confidence: Optional[float] = None
@@ -64,6 +67,7 @@ async def create_team(data: TeamCreate, db: Session = Depends(get_db)):
     _recalculate_team_metrics(db, team)
             
     db.commit()
+    db.refresh(team)
 
     try:
         log_event(
@@ -75,13 +79,16 @@ async def create_team(data: TeamCreate, db: Session = Depends(get_db)):
     except Exception as e:
         print(f"Failed to log event: {e}")
 
-    return team
+    max_team_size = get_max_team_size(db)
+    return team_to_out(team, max_team_size, db)
 
 
 @router.get("/", response_model=List[TeamOut])
 async def list_teams(db: Session = Depends(get_db)):
     """List all teams."""
-    return db.query(Team).all()
+    max_team_size = get_max_team_size(db)
+    teams = db.query(Team).all()
+    return [team_to_out(team, max_team_size, db) for team in teams]
 
 
 @router.get("/{team_id}", response_model=TeamOut)
@@ -90,7 +97,7 @@ async def get_team(team_id: str, db: Session = Depends(get_db)):
     t = db.query(Team).filter(Team.team_id == team_id).first()
     if not t:
         raise HTTPException(status_code=404, detail="Team not found")
-    return t
+    return team_to_out(t, get_max_team_size(db), db)
 
 
 @router.post("/{team_id}/add_member", response_model=TeamOut)
@@ -127,7 +134,7 @@ async def add_member(team_id: str, data: AddMemberRequest, db: Session = Depends
     except Exception as e:
         print(f"Failed to log event: {e}")
     db.refresh(t)
-    return t
+    return team_to_out(t, get_max_team_size(db), db)
 
 
 @router.delete("/{team_id}")
@@ -161,7 +168,106 @@ async def delete_team(team_id: str, db: Session = Depends(get_db)):
 # --------------- Team Formation Invites ---------------
 
 from ..models.invite import Invite, InviteStatus, InviteDirection
-from pydantic import BaseModel
+from ..models.hackathon import Hackathon
+
+DEFAULT_MAX_TEAM_SIZE = 4
+
+
+def get_max_team_size(db: Session) -> int:
+    hackathon = db.query(Hackathon).order_by(Hackathon.registration_start.desc().nullslast()).first()
+    if hackathon and hackathon.max_team_size:
+        return hackathon.max_team_size
+    return DEFAULT_MAX_TEAM_SIZE
+
+
+def _recalculate_team_metrics(db: Session, team: Team) -> None:
+    """Recalculate team formation metrics when membership changes."""
+    member_ids = team.member_ids or []
+    if not member_ids:
+        team.coverage_score = 0.0
+        team.diversity_score = 0.0
+        team.formation_confidence = 0.0
+        return
+
+    participants = (
+        db.query(Participant)
+        .filter(Participant.id.in_([str(member_id) for member_id in member_ids]))
+        .all()
+    )
+    if not participants:
+        return
+
+    from app.services.ai.core.schemas import SkillVector
+    from app.services.ai.pipelines.team_formation.formation import team_vector, coverage_score
+
+    member_vectors = []
+    for participant in participants:
+        raw_sv = participant.skill_vector or {}
+        clean_sv = {}
+        if isinstance(raw_sv, dict):
+            for key, value in raw_sv.items():
+                try:
+                    clean_sv[key] = float(value)
+                except (ValueError, TypeError):
+                    pass
+        if clean_sv:
+            member_vectors.append(SkillVector.from_dict(clean_sv))
+
+    if not member_vectors:
+        return
+
+    combined = team_vector(member_vectors)
+    required = SkillVector.from_dict(
+        {category: 1.0 for category in combined.scores.keys()}
+    )
+    team.coverage_score = round(coverage_score(combined, required) * 100, 2)
+    team.diversity_score = round(min(100.0, len(member_vectors) * 25.0), 2)
+    team.formation_confidence = round(
+        min(100.0, (team.coverage_score or 0) * 0.7 + (team.diversity_score or 0) * 0.3),
+        2,
+    )
+
+
+def get_valid_team_member_ids(db: Session, team: Team) -> list[str]:
+    raw_ids = [str(member_id) for member_id in (team.member_ids or [])]
+    if not raw_ids:
+        return []
+    found_ids = {
+        str(participant.id)
+        for participant in db.query(Participant).filter(Participant.id.in_(raw_ids)).all()
+    }
+    return [member_id for member_id in raw_ids if member_id in found_ids]
+
+
+def build_team_schema(team: Team, max_team_size: int, db: Session):
+    from app.services.ai.core.schemas import Team as TeamSchema
+
+    member_ids = get_valid_team_member_ids(db, team)
+    return TeamSchema(
+        team_id=str(team.team_id),
+        name=team.name or "",
+        leader_id=member_ids[0] if member_ids else "",
+        member_ids=member_ids,
+        slots_remaining=max(0, max_team_size - len(member_ids)),
+        is_open=len(member_ids) < max_team_size,
+        is_locked=False,
+    )
+
+
+def team_to_out(team: Team, max_team_size: int, db: Session) -> "TeamOut":
+    member_ids = get_valid_team_member_ids(db, team)
+    member_count = len(member_ids)
+    return TeamOut(
+        team_id=team.team_id,
+        name=team.name,
+        member_ids=member_ids,
+        coverage_score=team.coverage_score,
+        diversity_score=team.diversity_score,
+        formation_confidence=team.formation_confidence,
+        member_count=member_count,
+        max_team_size=max_team_size,
+        slots_remaining=max(0, max_team_size - member_count),
+    )
 
 class InviteRequest(BaseModel):
     participant_id: str
@@ -169,6 +275,7 @@ class InviteRequest(BaseModel):
 
 class JoinRequest(BaseModel):
     participant_id: str
+    participant_email: Optional[str] = None
 
 class InviteRespondRequest(BaseModel):
     responder_id: str
@@ -182,17 +289,7 @@ async def invite_participant(team_id: str, data: InviteRequest, db: Session = De
         raise HTTPException(status_code=404, detail="Team not found")
         
     try:
-        from app.services.ai.core.schemas import Team as TeamSchema
-        # Convert to Pydantic schema for the logic
-        team_schema = TeamSchema(
-            team_id=str(team.team_id),
-            name=team.name,
-            leader_id=str(team.member_ids[0]) if team.member_ids else None, # Simplified leader logic
-            member_ids=[str(m) for m in team.member_ids],
-            slots_remaining=max(0, 4 - len(team.member_ids)), # Hardcode 4 max size for now
-            is_open=True,
-            is_locked=False
-        )
+        team_schema = build_team_schema(team, get_max_team_size(db), db)
         
         from app.services.ai.pipelines.team_formation.invites import invite_participant as ai_invite
         invite_schema = ai_invite(team_schema, data.leader_id, data.participant_id)
@@ -220,25 +317,38 @@ async def request_join(team_id: str, data: JoinRequest, db: Session = Depends(ge
         raise HTTPException(status_code=404, detail="Team not found")
         
     participant = db.query(Participant).filter(Participant.id == data.participant_id).first()
+    if not participant and data.participant_email:
+        participant = db.query(Participant).filter(Participant.email == data.participant_email).first()
     if not participant:
         raise HTTPException(status_code=404, detail="Participant not found")
         
     try:
-        from app.services.ai.core.schemas import Team as TeamSchema, Participant as ParticipantSchema
-        team_schema = TeamSchema(
-            team_id=str(team.team_id),
-            name=team.name,
-            leader_id=str(team.member_ids[0]) if team.member_ids else None,
-            member_ids=[str(m) for m in team.member_ids],
-            slots_remaining=max(0, 4 - len(team.member_ids)),
-            is_open=True,
-            is_locked=False
+        from app.services.ai.core.schemas import (
+            Participant as ParticipantSchema,
+            ParsedResume,
+            SkillVector,
         )
+        team_schema = build_team_schema(team, get_max_team_size(db), db)
+
+        raw_sv = participant.skill_vector or {}
+        clean_sv = {}
+        if isinstance(raw_sv, dict):
+            for key, value in raw_sv.items():
+                try:
+                    clean_sv[key] = float(value)
+                except (ValueError, TypeError):
+                    pass
+
         participant_schema = ParticipantSchema(
             id=str(participant.id),
-            name=participant.name or "",
-            college_name=participant.college_name or "",
-            skills=[]
+            parsed_resume=ParsedResume(
+                name=participant.name or "Unknown",
+                college_name=participant.college_name or "",
+                github_url=participant.github_url or "",
+                raw_skills=participant.declared_skills or [],
+            ),
+            skill_vector=SkillVector.from_dict(clean_sv),
+            team_id=str(participant.team_id) if participant.team_id else None,
         )
         
         from app.services.ai.pipelines.team_formation.invites import request_to_join
@@ -271,17 +381,9 @@ async def respond_to_invite(invite_id: str, data: InviteRespondRequest, db: Sess
         raise HTTPException(status_code=404, detail="Team not found")
         
     try:
-        from app.services.ai.core.schemas import Team as TeamSchema, Invite as InviteSchema
+        from app.services.ai.core.schemas import Invite as InviteSchema
         
-        team_schema = TeamSchema(
-            team_id=str(team.team_id),
-            name=team.name,
-            leader_id=str(team.member_ids[0]) if team.member_ids else None,
-            member_ids=[str(m) for m in team.member_ids],
-            slots_remaining=max(0, 4 - len(team.member_ids)),
-            is_open=True,
-            is_locked=False
-        )
+        team_schema = build_team_schema(team, get_max_team_size(db), db)
         
         invite_schema = InviteSchema(
             invite_id=str(invite.id),
