@@ -10,6 +10,9 @@ from sqlalchemy.orm import Session
 from ..deps import get_db
 from ..models.hackathon import Hackathon
 
+from uuid import UUID
+from datetime import date
+
 router = APIRouter()
 
 
