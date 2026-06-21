@@ -34,6 +34,7 @@ class TeamOut(BaseModel):
     coverage_score: Optional[float] = None
     diversity_score: Optional[float] = None
     formation_confidence: Optional[float] = None
+    problem_statement: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -59,7 +60,9 @@ async def create_team(data: TeamCreate, db: Session = Depends(get_db)):
 
     # Update participants with team_id
     for pid in (data.member_ids or []):
-        p = db.query(Participant).filter(Participant.id == str(pid)).first()
+        p = db.query(Participant).filter(Participant.user_id == str(pid)).first()
+        if not p:
+            p = db.query(Participant).filter(Participant.id == str(pid)).first()
         if p:
             p.team_id = team.team_id
             
@@ -74,11 +77,11 @@ async def create_team(data: TeamCreate, db: Session = Depends(get_db)):
             db=db,
             event_type="team_created",
             payload={"team_id": str(team.team_id), "name": team.name},
-            user_id="system"
+            user_id=None
         )
     except Exception as e:
+        db.rollback()
         print(f"Failed to log event: {e}")
-
     max_team_size = get_max_team_size(db)
     return team_to_out(team, max_team_size, db)
 
@@ -99,6 +102,30 @@ async def get_team(team_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Team not found")
     return team_to_out(t, get_max_team_size(db), db)
 
+
+class TeamUpdate(BaseModel):
+    name: Optional[str] = None
+    problem_statement: Optional[str] = None
+    member_ids: Optional[List[str]] = None
+
+@router.put("/{team_id}", response_model=TeamOut)
+async def update_team(team_id: str, data: TeamUpdate, db: Session = Depends(get_db)):
+    """Update a team."""
+    t = db.query(Team).filter(Team.team_id == team_id).first()
+    if not t:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    if data.name is not None:
+        t.name = data.name
+    if data.problem_statement is not None:
+        t.problem_statement = data.problem_statement
+    if data.member_ids is not None:
+        t.member_ids = data.member_ids
+        _recalculate_team_metrics(db, t)
+        
+    db.commit()
+    db.refresh(t)
+    return team_to_out(t, get_max_team_size(db), db)
 
 @router.post("/{team_id}/add_member", response_model=TeamOut)
 async def add_member(team_id: str, data: AddMemberRequest, db: Session = Depends(get_db)):
@@ -129,11 +156,11 @@ async def add_member(team_id: str, data: AddMemberRequest, db: Session = Depends
             db=db,
             event_type="team_member_added",
             payload={"team_id": str(t.team_id), "participant_id": data.participant_id},
-            user_id="system"
+            user_id=None
         )
     except Exception as e:
+        db.rollback()
         print(f"Failed to log event: {e}")
-    db.refresh(t)
     return team_to_out(t, get_max_team_size(db), db)
 
 
@@ -158,14 +185,12 @@ async def delete_team(team_id: str, db: Session = Depends(get_db)):
             db=db,
             event_type="team_deleted",
             payload={"team_id": team_id},
-            user_id="system"
+            user_id=None
         )
     except Exception as e:
+        db.rollback()
         print(f"Failed to log event: {e}")
     return {"detail": "deleted"}
-
-
-# --------------- Team Formation Invites ---------------
 
 from ..models.invite import Invite, InviteStatus, InviteDirection
 from ..models.hackathon import Hackathon
@@ -317,6 +342,8 @@ async def request_join(team_id: str, data: JoinRequest, db: Session = Depends(ge
         raise HTTPException(status_code=404, detail="Team not found")
         
     participant = db.query(Participant).filter(Participant.id == data.participant_id).first()
+    if not participant:
+        participant = db.query(Participant).filter(Participant.user_id == data.participant_id).first()
     if not participant and data.participant_email:
         participant = db.query(Participant).filter(Participant.email == data.participant_email).first()
     if not participant:
@@ -441,7 +468,7 @@ async def trigger_team_formation(data: TeamFormationRequest):
             db=db,
             event_type="team_formation_triggered",
             payload={"task_id": task.id},
-            user_id="organizer"
+            user_id=None
         )
         db.close()
     except Exception as e:

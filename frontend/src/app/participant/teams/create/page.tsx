@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { getApiBaseUrl } from "@/lib/api";
 
 type Participant = {
   id: string;
@@ -43,6 +44,7 @@ export default function CreateTeam() {
   const [requiredSkills, setRequiredSkills] = useState<string[]>(["Python", "UI/UX"]);
   const [newSkill, setNewSkill] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [invitedMemberIds, setInvitedMemberIds] = useState<string[]>([]);
   const router = useRouter();
 
   const handleCreateTeam = async () => {
@@ -53,11 +55,11 @@ export default function CreateTeam() {
       
       const payload = {
         name: teamName || "Unnamed Team",
-        member_ids: session?.user?.id ? [session.user.id] : []
+        member_ids: session?.user?.id ? [session.user.id, ...invitedMemberIds] : [...invitedMemberIds]
       };
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/teams/create`, {
+      const apiBase = getApiBaseUrl();
+      const res = await fetch(`${apiBase}/teams/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -77,15 +79,54 @@ export default function CreateTeam() {
 
   const [recruits, setRecruits] = useState<Participant[]>([]);
   const [loadingRecruits, setLoadingRecruits] = useState(true);
+  const [teamCoverage, setTeamCoverage] = useState(0);
+  const [teamMembers, setTeamMembers] = useState<{id: string, name: string}[]>([]);
 
   useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const apiBase = getApiBaseUrl();
     setLoadingRecruits(true);
-    fetch(`${apiUrl}/participants/`)
+    fetch(`${apiBase}/participants/`)
       .then(async (r) => { if (!r.ok) throw new Error(`Status ${r.status}`); return r.json(); })
       .then((data) => setRecruits(data || []))
       .catch((e) => console.error("Failed to load participants:", e))
       .finally(() => setLoadingRecruits(false));
+
+    async function loadTeam() {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) return;
+      
+      try {
+        const pRes = await fetch(`${apiBase}/participants/${session.user.id}`);
+        if (!pRes.ok) return;
+        const pData = await pRes.json();
+        
+        if (pData.team_id) {
+          const tRes = await fetch(`${apiBase}/teams/${pData.team_id}`);
+          if (tRes.ok) {
+            const tData = await tRes.json();
+            setTeamCoverage(Math.round(tData.coverage_score || 0));
+            
+            if (tData.member_ids && tData.member_ids.length > 0) {
+              const members = [];
+              for (const mid of tData.member_ids) {
+                const mRes = await fetch(`${apiBase}/participants/${mid}`);
+                if (mRes.ok) {
+                  const mData = await mRes.json();
+                  members.push({ id: mData.id, name: mData.name || 'Unknown' });
+                }
+              }
+              setTeamMembers(members);
+            }
+          }
+        } else {
+          setTeamMembers([{ id: pData.id, name: pData.name || 'You' }]);
+        }
+      } catch (e) {
+        console.error("Failed to load team data:", e);
+      }
+    }
+    loadTeam();
   }, []);
 
   const currentRequiredVector = buildRequiredVector(requiredSkills);
@@ -207,43 +248,6 @@ export default function CreateTeam() {
                 )}
               </div>
             </div>
-            <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/20 shadow-[0_20px_40px_-15px_rgba(214,203,191,0.4)] overflow-hidden">
-              <div className="flex border-b border-outline-variant/10">
-                {["Invite Friends", "By Email", "Requests Sent"].map((tab) => (
-                  <button 
-                    key={tab}
-                    className={`flex-1 py-3 font-label-sm transition-colors ${
-                      activeTab === tab ? "text-primary border-b-2 border-primary" : "text-on-surface-variant hover:text-primary"
-                    }`}
-                    onClick={() => setActiveTab(tab)}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-              <div className="p-stack-md">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center">
-                        <span className="material-symbols-outlined text-[18px]">mail</span>
-                      </div>
-                      <span className="font-label-md font-bold text-on-surface">sarah.j@tech.io</span>
-                    </div>
-                    <span className="px-2 py-1 bg-secondary-container/30 text-secondary text-[10px] font-bold rounded-full">Invited</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center">
-                        <span className="material-symbols-outlined text-[18px]">mail</span>
-                      </div>
-                      <span className="font-label-md font-bold text-on-surface">marcus_v@ucla.edu</span>
-                    </div>
-                    <span className="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] font-bold rounded-full">Delivered</span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Right Column: Intelligence & Recruitment */}
@@ -255,8 +259,8 @@ export default function CreateTeam() {
                 <div className="relative w-24 h-24">
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
                     <circle className="text-surface-container-high" cx="18" cy="18" fill="transparent" r="16" stroke="currentColor" strokeWidth="2.5"></circle>
-                    <circle className="text-primary" cx="18" cy="18" fill="transparent" r="16" stroke="currentColor" strokeDasharray="100 100" strokeDashoffset="35" strokeLinecap="round" strokeWidth="2.5"></circle>
-                    <text className="text-[8px] font-bold fill-primary rotate-90 origin-center" textAnchor="middle" x="18" y="21">65%</text>
+                    <circle className="text-primary" cx="18" cy="18" fill="transparent" r="16" stroke="currentColor" strokeDasharray={`${teamCoverage} 100`} strokeDashoffset="0" strokeLinecap="round" strokeWidth="2.5"></circle>
+                    <text className="text-[8px] font-bold fill-primary rotate-90 origin-center" textAnchor="middle" x="18" y="21">{teamCoverage}%</text>
                   </svg>
                 </div>
                 <div className="flex-1 ml-6">
@@ -270,17 +274,12 @@ export default function CreateTeam() {
               <div className="space-y-4">
                 <div>
                   <p className="font-label-sm text-on-surface-variant uppercase tracking-widest mb-3">Current Members</p>
-                  <div className="flex -space-x-3">
-                    <img className="w-10 h-10 rounded-full border-2 border-white object-cover bg-surface-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVy5KoRSnIDJytOfYh6f5b8jSt-NzIQkXHQAMZKM58R4GqZ8BLUUQ7jlaaHBNn0tdRKn34Hh2QvoVkt57XWeQFXT67eYj9Ue7ZPsltIYZzQzgq0NbWlJwk71eFWXIOmKYJixoB1E3saeevLzTj4PEZpRhXwbW3eeqGdD4rhDkAZIr_Dv4lKtFyL4O0nKNSBhuOJivKVVMEVmqPl1SL_WFl_QG0097uYyT3Rv03PTpO4iAWwuv3IVq9qjT3BVoYe7qSbelQsHK8u3w" alt="Member 1" />
-                    <img className="w-10 h-10 rounded-full border-2 border-white object-cover bg-surface-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIFbJu0MS0mKNfCUUvZPsa-Itd1xSS7urJRM9GlRUMn1C2PH24-G0OV2wkY4v6rouLjgi6SOqnIT_-kP78W3dX9E6nP5i2rqlNdYEBi1AZ3QyfF37-dBySsXfi8UKOgRp0G-n17RR1J0nUMzUE2fwQv7RFdRrdlKpyR_qYQyXx7bUTu1Fl923G1bNvrTBZTgzcqKjLrQ_JhlfWyzDGZbMqSQOU2PVWEqSd-VI22T2tijpL3LunDuhsu1ffF55PINl5ATMiuOBD-Ls" alt="Member 2" />
-                    <div className="w-10 h-10 rounded-full border-2 border-white bg-surface-container-highest flex items-center justify-center text-[10px] font-bold text-on-surface-variant">+2</div>
-                  </div>
-                </div>
-                <div>
-                  <p className="font-label-sm text-on-surface-variant uppercase tracking-widest mb-3">Missing Critical Roles</p>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="px-3 py-1 bg-error-container/20 text-error text-[12px] font-bold rounded-full border border-error/10">Lead Backend</span>
-                    <span className="px-3 py-1 bg-error-container/20 text-error text-[12px] font-bold rounded-full border border-error/10">Data Scientist</span>
+                  <div className="flex flex-col gap-2">
+                    {teamMembers.map((member) => (
+                      <div key={member.id} className="font-label-md text-on-surface px-3 py-2 bg-surface-container-low border border-outline-variant/10 rounded-md">
+                        {member.name}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -300,7 +299,13 @@ export default function CreateTeam() {
                         <h3 className="font-label-md font-bold text-on-surface">{recruit.name}</h3>
                         <p className="text-[12px] text-tertiary font-bold">{recruit.matchScore}% Match</p>
                       </div>
-                      <button className="bg-primary text-white text-[12px] px-3 py-1.5 rounded-full font-bold hover:scale-105 transition-transform">Invite</button>
+                      <button 
+                        onClick={() => setInvitedMemberIds(prev => [...prev, recruit.id])}
+                        disabled={invitedMemberIds.includes(recruit.id)}
+                        className={`text-[12px] px-3 py-1.5 rounded-full font-bold hover:scale-105 transition-transform ${invitedMemberIds.includes(recruit.id) ? "bg-surface-variant text-on-surface-variant" : "bg-primary text-white"}`}
+                      >
+                        {invitedMemberIds.includes(recruit.id) ? "Invited" : "Invite"}
+                      </button>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {(recruit.declared_skills || (recruit as any).skills || []).map((skill) => (
