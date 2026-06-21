@@ -24,13 +24,13 @@ class ParticipantCreate(BaseModel):
     team_id: Optional[str] = None
 
 class ParticipantOut(BaseModel):
-    id: str
+    id: uuid.UUID | str
     name: Optional[str] = None
     college_name: Optional[str] = None
     github_url: Optional[str] = None
     declared_skills: Optional[List[str]] = []
     skill_vector: Optional[dict] = None
-    team_id: Optional[str] = None
+    team_id: Optional[uuid.UUID | str] = None
 
     class Config:
         from_attributes = True
@@ -59,6 +59,14 @@ async def register_participant(
     db: Session = Depends(get_db)
 ):
     """Store a new participant registration. Resume skill parsing runs in background via Celery."""
+    import uuid
+    try:
+        # Check if the provided ID is a valid UUID
+        uuid.UUID(id)
+    except ValueError:
+        # If they entered a random number like "1" in Swagger, generate a real UUID
+        id = str(uuid.uuid4())
+
     existing = db.query(Participant).filter(Participant.id == id).first()
     if existing:
         raise HTTPException(status_code=409, detail="Participant already registered")
@@ -85,7 +93,6 @@ async def register_participant(
         college_name=college_name,
         github_url=github_url,
         team_id=None,
-        vectorization_status="pending",
     )
     db.add(participant)
     db.commit()
@@ -280,45 +287,51 @@ async def process_resume_background(payload: BackgroundResumePayload):
     return {"status": "queued", "task_id": task.id}
 
 @router.post("/{registration_id}/approve")
-async def approve_registration(registration_id: str):
+async def approve_registration(registration_id: str, db: Session = Depends(get_db)):
     """
     Admin endpoint to manually approve a registration that was flagged for review.
     """
-    reg = fetch_one("SELECT * FROM registrations WHERE id = %s", (registration_id,))
+    from ..models.registration import Registration
+    reg = db.query(Registration).filter(Registration.id == registration_id).first()
     if not reg:
         raise HTTPException(status_code=404, detail="Registration not found")
 
-    if reg['decision'] == 'AUTO_APPROVED':
+    if reg.decision == 'AUTO_APPROVED':
         return {"status": "already_approved"}
 
-    execute("UPDATE registrations SET decision = 'AUTO_APPROVED' WHERE id = %s", (registration_id,))
+    reg.decision = 'AUTO_APPROVED'
 
-    # Explicitly create participant
-    execute(
-        """
-        INSERT INTO participants (hackathon_id, user_id, registration_id, name, email, college_name, github_url, declared_skills, status)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'approved')
-        """,
-        (reg['hackathon_id'], reg['user_id'], reg['id'], reg['name'], reg['email'], reg['college'], reg['github'], reg['skills'])
-    )
-
-    return {"status": "approved", "participant_created": True}
+    # Check if participant already exists to prevent duplicate key error
+    existing_participant = db.query(Participant).filter(Participant.id == str(reg.user_id)).first()
+    if not existing_participant:
+        # Explicitly create participant
+        participant = Participant(
+            id=str(reg.user_id),
+            name=reg.name,
+            college_name=reg.college,
+            github_url=reg.github,
+            declared_skills=reg.skills or [],
+        )
+        db.add(participant)
+    
+    db.commit()
+    return {"status": "approved", "participant_created": not bool(existing_participant)}
 
 @router.post("/{registration_id}/reject")
-async def reject_registration(registration_id: str):
+async def reject_registration(registration_id: str, db: Session = Depends(get_db)):
     """
     Admin endpoint to manually reject a registration.
     """
-    reg = fetch_one("SELECT * FROM registrations WHERE id = %s", (registration_id,))
+    from ..models.registration import Registration
+    reg = db.query(Registration).filter(Registration.id == registration_id).first()
     if not reg:
         raise HTTPException(status_code=404, detail="Registration not found")
 
-    if reg['decision'] == 'REJECTED':
+    if reg.decision == 'REJECTED':
         return {"status": "already_rejected"}
 
-    execute("UPDATE registrations SET decision = 'REJECTED' WHERE id = %s", (registration_id,))
-
-    # Ideally also handle deleting from participants if it was somehow approved then rejected, but keeping it simple for demo.
+    reg.decision = 'REJECTED'
+    db.commit()
 
     return {"status": "rejected"}
 
@@ -340,7 +353,11 @@ async def validate_facescan(request: FaceScanRequest, db: Session = Depends(get_
     if not reg:
         raise HTTPException(status_code=404, detail="Registration not found")
         
-    reg.face_scan_status = request.status
+    status_val = request.status
+    if status_val == "success":
+        status_val = "verified"
+        
+    reg.face_scan_status = status_val
     reg.face_scan_score = request.score
     reg.face_scan_consented = request.consented
     
@@ -362,7 +379,7 @@ async def chat_with_bot(request: ChatRequest, db: Session = Depends(get_db)):
     from app.services.ai.pipelines.chatbot.rag import ask_chatbot
     
     try:
-        response = ask_chatbot(request.question, request.hackathon_id, db)
+        response = await ask_chatbot(request.question, request.hackathon_id, db)
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
