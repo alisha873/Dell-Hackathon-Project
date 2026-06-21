@@ -9,58 +9,10 @@ from ..deps import get_db
 from ..models.team import Team
 from ..models.participant import Participant
 
-from app.services.ai.core.schemas import SkillVector, Participant as ParticipantSchema
-from app.services.ai.core.skill_taxonomy import category_names
-from app.services.ai.pipelines.team_formation.formation import team_vector, coverage_score, diversity_score
-
-def _recalculate_team_metrics(db: Session, team: Team):
-    """Calculates coverage and diversity for a manually assembled team using a baseline 'perfect' requirement vector."""
-    if not team.member_ids:
-        team.coverage_score = 0.0
-        team.diversity_score = 0.0
-        team.formation_confidence = 0.0
-        return
-
-    # Fetch participant skill vectors
-    members = []
-    for pid in team.member_ids:
-        p = db.query(Participant).filter(Participant.id == str(pid)).first()
-        if p:
-            # Safely parse skill vector
-            raw_sv = p.skill_vector or {}
-            clean_sv = {}
-            if isinstance(raw_sv, dict):
-                for k, v in raw_sv.items():
-                    try:
-                        clean_sv[k] = float(v)
-                    except (ValueError, TypeError):
-                        pass
-            
-            from app.services.ai.core.schemas import ParsedResume
-            members.append(ParticipantSchema(
-                id=str(p.id),
-                skill_vector=SkillVector.from_dict(clean_sv),
-                parsed_resume=ParsedResume(name=""), # Provide empty required object
-                college_name=p.college_name or "Unknown"
-            ))
-
-    if not members:
-        return
-
-    # Calculate ideal 'baseline' vector (all roles = 1.0)
-    ideal_scores = {cat: 1.0 for cat in category_names()}
-    ideal_vec = SkillVector(scores=ideal_scores)
-
-    # Compute metrics
-    t_vec = team_vector([m.skill_vector for m in members])
-    cov = coverage_score(t_vec, ideal_vec)
-    div = diversity_score(members)
-    
-    # Save to DB model
-    team.coverage_score = cov
-    team.diversity_score = div
-    team.formation_confidence = min((0.5 * cov) + (0.3 * div) + 0.2, 1.0)
-
+try:
+    from app.services.audit_service import log_event
+except ImportError:
+    def log_event(*args, **kwargs): pass
 
 router = APIRouter()
 
@@ -113,6 +65,16 @@ async def create_team(data: TeamCreate, db: Session = Depends(get_db)):
             
     db.commit()
 
+    try:
+        log_event(
+            db=db,
+            event_type="team_created",
+            payload={"team_id": str(team.team_id), "name": team.name},
+            user_id="system"
+        )
+    except Exception as e:
+        print(f"Failed to log event: {e}")
+
     return team
 
 
@@ -154,6 +116,16 @@ async def add_member(team_id: str, data: AddMemberRequest, db: Session = Depends
     _recalculate_team_metrics(db, t)
 
     db.commit()
+
+    try:
+        log_event(
+            db=db,
+            event_type="team_member_added",
+            payload={"team_id": str(t.team_id), "participant_id": data.participant_id},
+            user_id="system"
+        )
+    except Exception as e:
+        print(f"Failed to log event: {e}")
     db.refresh(t)
     return t
 
@@ -173,6 +145,16 @@ async def delete_team(team_id: str, db: Session = Depends(get_db)):
 
     db.delete(t)
     db.commit()
+
+    try:
+        log_event(
+            db=db,
+            event_type="team_deleted",
+            payload={"team_id": team_id},
+            user_id="system"
+        )
+    except Exception as e:
+        print(f"Failed to log event: {e}")
     return {"detail": "deleted"}
 
 
@@ -348,7 +330,21 @@ class TeamFormationRequest(BaseModel):
 async def trigger_team_formation(data: TeamFormationRequest):
     """Triggers coverage-driven team assembly as a background Celery task."""
     from app.tasks.team_tasks import team_formation_task
-    task = team_formation_task.delay(team_size=data.team_size)
+    task = team_formation_task.delay()
+
+    try:
+        from ..deps import SessionLocal
+        db = SessionLocal()
+        log_event(
+            db=db,
+            event_type="team_formation_triggered",
+            payload={"task_id": task.id},
+            user_id="organizer"
+        )
+        db.close()
+    except Exception as e:
+        print(f"Failed to log event: {e}")
+
     return {
         "status": "formation_started",
         "message": f"Teams of size {data.team_size} are being formed in the background.",

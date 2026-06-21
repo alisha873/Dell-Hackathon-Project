@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useOnboardingStore } from "@/store/useOnboardingStore";
+import { createClient } from "@/utils/supabase/client";
 
 const MOCK_OPEN_TEAMS = [
   {
@@ -73,6 +75,39 @@ function calculateMatch(participantVector: Record<string, number> | undefined, r
 export default function JoinTeam() {
   const { aiData } = useOnboardingStore();
   const participantVector = aiData?.skill_vector;
+  const [requestingId, setRequestingId] = useState<string | null>(null);
+
+  const handleJoinRequest = async (teamId: string) => {
+    try {
+      setRequestingId(teamId);
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user?.id) {
+        alert("You must be logged in to request to join a team.");
+        return;
+      }
+
+      const payload = { participant_id: session.user.id };
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${apiUrl}/teams/${teamId}/request-join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        alert("Join request sent!");
+      } else {
+        alert("Failed to send join request. Team might not exist in local db yet.");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setRequestingId(null);
+    }
+  };
 
   const sortedTeams = [...MOCK_OPEN_TEAMS].map(team => ({
     ...team,
@@ -83,7 +118,7 @@ export default function JoinTeam() {
   const otherTeams = sortedTeams.filter(t => t.matchScore < 50);
 
   return (
-    <div className="flex max-w-[1280px] mx-auto">
+    <div className="flex max-w-[1400px] mx-auto">
       {/* Main Content Area */}
       <main className="flex-1 p-6 lg:p-margin-desktop bg-background min-h-[calc(100vh-80px)]">
         <div className="flex flex-col gap-stack-lg">
@@ -148,8 +183,12 @@ export default function JoinTeam() {
                         </div>
                       </div>
                       <div className="flex gap-2 pt-2">
-                        <button className="flex-1 flex justify-center py-3 px-4 rounded-2xl bg-primary text-white font-medium hover:opacity-90 transition-all">
-                          Request to Join
+                        <button 
+                          onClick={() => handleJoinRequest(team.id)}
+                          disabled={requestingId === team.id}
+                          className="flex-1 flex justify-center py-3 px-4 rounded-2xl bg-primary text-white font-medium hover:opacity-90 transition-all disabled:opacity-50"
+                        >
+                          {requestingId === team.id ? "Sending..." : "Request to Join"}
                         </button>
                       </div>
                     </div>
@@ -183,7 +222,13 @@ export default function JoinTeam() {
                   </div>
                   <div className="md:col-span-3 flex justify-end gap-2">
                     <span className="px-3 py-1 bg-surface-container-low text-on-surface-variant rounded-full text-[12px] font-bold flex items-center">{team.matchScore}% Match</span>
-                    <button className="px-4 py-2 bg-surface-container-high text-on-surface font-medium rounded-xl hover:bg-surface-container-highest transition-all">Request</button>
+                    <button 
+                      onClick={() => handleJoinRequest(team.id)}
+                      disabled={requestingId === team.id}
+                      className="px-4 py-2 bg-surface-container-high text-on-surface font-medium rounded-xl hover:bg-surface-container-highest transition-all disabled:opacity-50"
+                    >
+                      {requestingId === team.id ? "..." : "Request"}
+                    </button>
                   </div>
                 </div>
               ))}
@@ -193,27 +238,7 @@ export default function JoinTeam() {
       </main>
 
       {/* Right Side Panel (AI Insights) */}
-      <aside className="hidden lg:block w-96 p-6 sticky top-0 h-screen overflow-y-auto bg-surface-container-lowest border-l border-outline-variant/30">
-        <div className="flex flex-col gap-6">
-          {/* AI Insights Card */}
-          {recommendedTeams.length > 0 && (
-            <div className="bg-primary text-white p-8 rounded-[40px] shadow-[0_20px_30px_-10px_rgba(214,203,191,0.3)] relative overflow-hidden">
-              <div className="relative z-10 space-y-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-                  <span className="text-label-sm font-semibold uppercase tracking-widest">Personal Analysis</span>
-                </div>
-                <div>
-                  <p className="text-white/80 text-label-sm mb-1 uppercase tracking-wider">Top Recommendation</p>
-                  <p className="font-headline-sm text-[24px] leading-tight italic">"Your skills strongly match {recommendedTeams[0].name}."</p>
-                </div>
-                <p className="text-body-md text-white/90">This team is currently missing a {recommendedTeams[0].missingRole} to finalize their product.</p>
-              </div>
-              <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-            </div>
-          )}
-        </div>
-      </aside>
+      
     </div>
   );
 }

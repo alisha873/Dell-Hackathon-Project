@@ -16,3 +16,7 @@ class Participant(Base):
     team_id = Column(UUID(as_uuid=True), nullable=True)
     gender = Column(Text, nullable=True)
     location = Column(Text, nullable=True)
+    degree = Column(Text, nullable=True)
+    phone = Column(Text, nullable=True)
+    email = Column(Text, nullable=True)
+    status = Column(Text, nullable=True)
