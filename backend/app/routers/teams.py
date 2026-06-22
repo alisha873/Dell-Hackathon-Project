@@ -21,7 +21,8 @@ router = APIRouter()
 
 class TeamCreate(BaseModel):
     name: str
-    member_ids: Optional[List[str]] = []
+    member_ids: Optional[List[str]] = None
+    problem_statement: Optional[str] = None
 
 
 class TeamOut(BaseModel):

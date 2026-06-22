@@ -67,7 +67,7 @@ export default function TeamWorkspace() {
           }
         }
       } catch (e) {
-        console.error(e);
+        console.error("Error in fetchTeamData:", e);
       }
     };
     fetchTeamData();
@@ -128,7 +128,7 @@ export default function TeamWorkspace() {
         alert("Failed to submit project.");
       }
     } catch (e) {
-      console.error(e);
+      console.error("Error in fetchTeamData:", e);
     } finally {
       setIsSubmitting(false);
     }

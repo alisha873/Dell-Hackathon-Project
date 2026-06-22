@@ -58,7 +58,7 @@ export default function CreateTeam() {
       const apiBase = getApiBaseUrl();
       
       if (session?.user?.id) {
-        const pRes = await fetch(`${apiBase}/participants/${session.user.id}`);
+        const pRes = await fetch(`${apiBase}/participants/${session.user.id}`, { cache: 'no-store' });
         if (pRes.ok) {
           const pData = await pRes.json();
           if (pData.team_id) {
@@ -99,7 +99,7 @@ export default function CreateTeam() {
       const apiBase = getApiBaseUrl();
       
       if (session?.user?.id) {
-        const pRes = await fetch(`${apiBase}/participants/${session.user.id}`);
+        const pRes = await fetch(`${apiBase}/participants/${session.user.id}`, { cache: 'no-store' });
         if (pRes.ok) {
           const pData = await pRes.json();
           if (pData.team_id) {
@@ -151,18 +151,18 @@ export default function CreateTeam() {
     if (!session?.user?.id) return;
     
     try {
-      const pRes = await fetch(`${apiBase}/participants/${session.user.id}`);
+      const pRes = await fetch(`${apiBase}/participants/${session.user.id}`, { cache: 'no-store' });
       if (!pRes.ok) return;
       const pData = await pRes.json();
       
       if (pData.team_id) {
-        const tRes = await fetch(`${apiBase}/teams/${pData.team_id}`);
+        const tRes = await fetch(`${apiBase}/teams/${pData.team_id}`, { cache: 'no-store' });
         if (tRes.ok) {
           const tData = await tRes.json();
           if (tData.member_ids && tData.member_ids.length > 0) {
             const members = [];
             for (const mid of tData.member_ids) {
-              const mRes = await fetch(`${apiBase}/participants/${mid}`);
+              const mRes = await fetch(`${apiBase}/participants/${mid}`, { cache: 'no-store' });
               if (mRes.ok) {
                 const mData = await mRes.json();
                 members.push({ id: mData.id, name: mData.name || 'Unknown' });
@@ -182,7 +182,7 @@ export default function CreateTeam() {
   useEffect(() => {
     const apiBase = getApiBaseUrl();
     setLoadingRecruits(true);
-    fetch(`${apiBase}/participants/`)
+    fetch(`${apiBase}/participants/`, { cache: 'no-store' })
       .then(async (r) => { if (!r.ok) throw new Error(`Status ${r.status}`); return r.json(); })
       .then((data) => setRecruits(data || []))
       .catch((e) => console.error("Failed to load participants:", e))

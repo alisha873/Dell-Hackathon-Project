@@ -18,7 +18,14 @@ export async function login(formData: FormData) {
     return redirect('/participant/dashboard')
   }
 
-  const { error } = await supabase.auth.signInWithPassword(data)
+  let error;
+  try {
+    const res = await supabase.auth.signInWithPassword(data);
+    error = res.error;
+  } catch (err: any) {
+    console.error("Supabase login error:", err);
+    return redirect('/auth/participant?mode=signin&error=' + encodeURIComponent("Network error: Could not connect to authentication server."));
+  }
 
   if (error) {
     return redirect('/auth/participant?mode=signin&error=' + encodeURIComponent(error.message))
@@ -41,15 +48,27 @@ export async function signup(formData: FormData) {
     return redirect('/onboarding/participant')
   }
 
-  const { data: signUpData, error } = await supabase.auth.signUp(data)
+  let signUpData, error;
+  try {
+    const res = await supabase.auth.signUp(data);
+    signUpData = res.data;
+    error = res.error;
+  } catch (err: any) {
+    console.error("Supabase signup error:", err);
+    return redirect('/auth/participant?mode=signup&error=' + encodeURIComponent("Network error: Could not connect to authentication server."));
+  }
 
   if (error) {
     // If they already exist, try to log them in automatically to keep the flow smooth
     if (error.message.includes("User already registered") || error.message.includes("already registered")) {
-      const { error: loginError } = await supabase.auth.signInWithPassword(data);
-      if (!loginError) {
-        revalidatePath('/', 'layout');
-        return redirect('/onboarding/participant');
+      try {
+        const { error: loginError } = await supabase.auth.signInWithPassword(data);
+        if (!loginError) {
+          revalidatePath('/', 'layout');
+          return redirect('/onboarding/participant');
+        }
+      } catch (loginErr) {
+        console.error("Auto-login error:", loginErr);
       }
     }
     return redirect('/auth/participant?mode=signup&error=' + encodeURIComponent(error.message))
@@ -73,7 +92,14 @@ export async function loginOrganizer(formData: FormData) {
     return redirect('/organizer/dashboard')
   }
 
-  const { error } = await supabase.auth.signInWithPassword(data)
+  let error;
+  try {
+    const res = await supabase.auth.signInWithPassword(data);
+    error = res.error;
+  } catch (err: any) {
+    console.error("Supabase org login error:", err);
+    return redirect('/auth/organizer?mode=signin&error=' + encodeURIComponent("Network error: Could not connect to authentication server."));
+  }
 
   if (error) {
     return redirect('/auth/organizer?mode=signin&error=' + encodeURIComponent(error.message))
@@ -96,22 +122,34 @@ export async function signupOrganizer(formData: FormData) {
     return redirect('/organizer/dashboard')
   }
 
-  const { data: signUpData, error } = await supabase.auth.signUp({
-    ...data,
-    options: {
-      data: {
-        organization_name: formData.get('organization_name'),
-        role: 'organizer',
+  let signUpData, error;
+  try {
+    const res = await supabase.auth.signUp({
+      ...data,
+      options: {
+        data: {
+          organization_name: formData.get('organization_name'),
+          role: 'organizer',
+        }
       }
-    }
-  })
+    });
+    signUpData = res.data;
+    error = res.error;
+  } catch (err: any) {
+    console.error("Supabase org signup error:", err);
+    return redirect('/auth/organizer?mode=signup&error=' + encodeURIComponent("Network error: Could not connect to authentication server."));
+  }
 
   if (error) {
     if (error.message.includes("User already registered") || error.message.includes("already registered")) {
-      const { error: loginError } = await supabase.auth.signInWithPassword(data);
-      if (!loginError) {
-        revalidatePath('/', 'layout');
-        return redirect('/organizer/dashboard');
+      try {
+        const { error: loginError } = await supabase.auth.signInWithPassword(data);
+        if (!loginError) {
+          revalidatePath('/', 'layout');
+          return redirect('/organizer/dashboard');
+        }
+      } catch (loginErr) {
+        console.error("Auto-login error:", loginErr);
       }
     }
     return redirect('/auth/organizer?mode=signup&error=' + encodeURIComponent(error.message))

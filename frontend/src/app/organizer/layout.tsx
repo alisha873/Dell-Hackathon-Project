@@ -1,3 +1,5 @@
+import OrganizerChatbot from "@/components/OrganizerChatbot";
+
 export default function OrganizerLayout({
   children,
 }: {
@@ -8,6 +10,7 @@ export default function OrganizerLayout({
       <main className="min-h-screen w-full">
         {children}
       </main>
+      <OrganizerChatbot />
     </div>
   );
 }
