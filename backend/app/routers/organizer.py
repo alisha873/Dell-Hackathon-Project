@@ -339,3 +339,16 @@ async def reject_registration(registration_id: str, db: Session = Depends(get_db
 
     return {"status": "rejected"}
 
+class OrganizerChatRequest(BaseModel):
+    question: str
+
+@router.post("/chat")
+async def chat_with_organizer_bot(request: OrganizerChatRequest, db: Session = Depends(get_db)):
+    """Ask the Organizer Copilot a question about teams and evaluations."""
+    from app.services.ai.pipelines.chatbot.organizer_rag import ask_organizer_chatbot
+    
+    try:
+        response = await ask_organizer_chatbot(request.question, db)
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

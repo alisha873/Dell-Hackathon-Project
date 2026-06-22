@@ -5,71 +5,9 @@ import { ArrowRight, Trophy, Code, Users, Sparkles, Calendar as CalendarIcon } f
 import { useOnboardingStore } from "@/store/useOnboardingStore";
 import { useEffect, useState } from "react";
 
-type Hack = {
-  id: string;
-  name: string;
-  theme?: string | null;
-  description?: string | null;
-  event_start?: string | null;
-  event_end?: string | null;
-  targetSkills?: Record<string, number>;
-}
-
-function calculateMatch(participantVector: Record<string, number> | undefined, hackathonVector: Record<string, number>) {
-  if (!participantVector) return 0;
-  let score = 0;
-  let maxPossible = 0;
-  
-  for (const [skill, weight] of Object.entries(hackathonVector)) {
-    maxPossible += weight;
-    if (participantVector[skill]) {
-      score += participantVector[skill] * weight;
-    }
-  }
-  
-  if (maxPossible === 0) return 0;
-  return Math.round((score / maxPossible) * 100);
-}
 
 export default function ParticipantDashboard() {
-  const { fullName, aiData } = useOnboardingStore();
-  const participantVector = aiData?.skill_vector;
-
-  // Fetch hackathons from backend
-  const [hackathons, setHackathons] = useState<Hack[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-    setLoading(true);
-    fetch(`${apiUrl}/hackathons/`)
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`Status ${r.status}`);
-        return r.json();
-      })
-      .then((data) => {
-        // Map backend shape to frontend-friendly shape
-        const mapped = (data || []).map((h: any) => ({
-          id: h.id,
-          name: h.name,
-          theme: h.theme,
-          description: h.description,
-          event_start: h.event_start,
-          event_end: h.event_end,
-          targetSkills: h.target_skills || {},
-        }));
-        setHackathons(mapped);
-      })
-      .catch((e) => setError(String(e)))
-      .finally(() => setLoading(false));
-  }, []);
-
-  // Calculate scores and sort
-  const sortedHackathons = [...hackathons].map(h => ({
-    ...h,
-    matchScore: calculateMatch(participantVector, (h.targetSkills as unknown) as Record<string, number> || {})
-  })).sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+  const { fullName } = useOnboardingStore();
 
   const firstName = fullName ? fullName.split(" ")[0] : "Hacker";
 
@@ -146,35 +84,6 @@ export default function ParticipantDashboard() {
             </div>
           </div>
 
-          {/* AI Recommended Hackathons */}
-          <div className="mb-8">
-            <h2 className="text-[20px] font-bold mb-4">AI Recommended Hackathons</h2>
-
-            {loading ? (
-              <div className="text-on-surface-variant">Loading hackathons...</div>
-            ) : error ? (
-              <div className="text-error">Failed to load hackathons: {error}</div>
-            ) : sortedHackathons.length === 0 ? (
-              <div className="text-on-surface-variant">No hackathons available.</div>
-            ) : (
-              <div className="space-y-4">
-                {sortedHackathons.slice(0, 4).map((hack: any) => (
-                  <div key={hack.id} className="bg-white p-4 rounded-2xl border border-outline-variant/20 flex items-start justify-between">
-                    <div>
-                      <div className="text-sm text-on-surface-variant mb-1">{hack.theme || 'General'}</div>
-                      <h4 className="font-bold text-[16px]">{hack.name || hack.title}</h4>
-                      <p className="text-on-surface-variant text-[13px] mt-1">{hack.description}</p>
-                    </div>
-                    <div className="text-right flex flex-col items-end justify-between">
-                      <div className="text-[12px] text-on-surface-variant">Match</div>
-                      <div className="font-bold text-[18px] text-primary">{hack.matchScore ?? 0}%</div>
-                      <Link href={`/participant/hackathons/${hack.id}`} className="text-[13px] text-primary mt-3">View →</Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
 
         <div>

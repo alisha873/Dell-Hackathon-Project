@@ -28,9 +28,13 @@ export async function updateSession(request: NextRequest) {
   )
 
   // refreshing the auth token
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user = null;
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user;
+  } catch (error) {
+    console.error("Supabase middleware auth error:", error);
+  }
 
   const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
   const isParticipantRoute = request.nextUrl.pathname.startsWith('/participant') || request.nextUrl.pathname.startsWith('/onboarding')
@@ -50,12 +54,18 @@ export async function updateSession(request: NextRequest) {
     }
 
     const url = request.nextUrl.clone()
-    const role = user.user_metadata?.role;
     
-    if (role === 'organizer') {
+    if (request.nextUrl.pathname.startsWith('/auth/organizer')) {
       url.pathname = '/organizer/dashboard'
-    } else {
+    } else if (request.nextUrl.pathname.startsWith('/auth/participant')) {
       url.pathname = '/participant/dashboard'
+    } else {
+      const role = user.user_metadata?.role;
+      if (role === 'organizer') {
+        url.pathname = '/organizer/dashboard'
+      } else {
+        url.pathname = '/participant/dashboard'
+      }
     }
     
     return NextResponse.redirect(url)

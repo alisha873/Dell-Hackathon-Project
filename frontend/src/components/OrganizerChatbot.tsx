@@ -7,10 +7,10 @@ interface Message {
   content: string;
 }
 
-export default function Chatbot() {
+export default function OrganizerChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "Hi! I'm the HackOS Support Bot. How can I help you today?" }
+    { role: "assistant", content: "Hi! I'm your HackOS Organizer Copilot. Ask me about teams, registrations, or reviewer evaluations." }
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -33,8 +33,8 @@ export default function Chatbot() {
     setIsLoading(true);
 
     try {
-      // Calling the real backend endpoint:
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/participants/chat`, {
+      // Calling the real backend endpoint for organizers:
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/organizer/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -64,10 +64,10 @@ export default function Chatbot() {
         <div className="fixed bottom-8 right-8 z-50 group">
           <button 
             onClick={() => setIsOpen(true)}
-            className="bg-primary-container text-on-primary-container p-4 rounded-2xl shadow-xl hover:scale-110 active:scale-95 transition-all flex items-center gap-3"
+            className="bg-black text-white p-4 rounded-2xl shadow-xl hover:scale-110 active:scale-95 transition-all flex items-center gap-3"
           >
-            <span className="material-symbols-outlined">help</span>
-            <span className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-[120px] transition-all duration-500 font-label-md">Team Support</span>
+            <span className="material-symbols-outlined">auto_awesome</span>
+            <span className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-[120px] transition-all duration-500 font-label-md">Ask Copilot</span>
           </button>
         </div>
       )}
@@ -76,10 +76,10 @@ export default function Chatbot() {
       {isOpen && (
         <div className="fixed bottom-8 right-8 z-50 w-80 md:w-96 bg-white rounded-2xl shadow-2xl border border-outline-variant/30 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5">
           {/* Header */}
-          <div className="bg-primary text-white p-4 flex items-center justify-between">
+          <div className="bg-black text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined">smart_toy</span>
-              <h3 className="font-bold text-[16px]">HackOS Bot</h3>
+              <span className="material-symbols-outlined">auto_awesome</span>
+              <h3 className="font-bold text-[16px]">Organizer Copilot</h3>
             </div>
             <button 
               onClick={() => setIsOpen(false)}
